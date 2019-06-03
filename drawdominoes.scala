@@ -307,12 +307,40 @@ object Validated {
   }
 }
 
+sealed trait Deck[+A] {
+  def main: Vector[A]
+  def used: Vector[A]
+
+  def isEmpty: Boolean = main.diff(used).isEmpty
+
+  def length: Int = unused.length
+
+  def unused[B]: Vector[B] = main.diff(used)
+
+  def add[B](back: B): Deck[B] = Deck[B](this.main :+ back, this.used) 
+
+  def use[B](index: Int): Validated[Int, B] = unused.isEmpty match {
+    case true => Invalid(-1)
+    case false => (index > unused.length || index < 0) match {
+      case true => Invalid(index)
+      case false => {
+        val item: B = unused(index)
+        used :+ item
+        Valid(item)
+      }
+  }
+}
+
+object Deck {
+  def apply[A](m: Vector[A], u: Vector[A]): Deck[A] = Deck[A](m, u)
+}
+
 sealed trait Tile {
   def a: Int
 
   def b: Int
 
-  def print: Unit = println(s"${a}, ${b}")
+  def print: String = s"${a}, ${b} "
 }
 
 object Tile {
@@ -322,84 +350,230 @@ object Tile {
 sealed trait Player {
   def name: String
 
-  def pile: Vector[Tile]
+  def pile: Deck[Tile]
 
-  def boneyardLeftovers(boneyard: Vector[Tile]): Vector[Tile] = boneyard.diff(this.pile)
+  def getTileFromBN(boneyard: Deck[Tile], position: Int): Deck[Tile] = pile.add(boneyard.use(position(boneyard)))
 
-  def getTile(boneyard: Vector[Tile], position: Int): Tile = boneyardLeftovers(boneyard).take(position(boneyard)).last
-
-  def drawTile(boneyard: Vector[Tile]): Validated[String, Tile] =
+  def drawTileFromBN(boneyard: Vector[Tile]): Validated[String, Unit] =
     boneyardLeftovers(boneyard).length match {
       case 0 => Invalid("Boneyard is empty!")
-      case _ => Valid(getTile(boneyard, position(boneyard)))
+      case _ => Valid(getTileFromBN(boneyard, position(boneyard)))
     }
+
+  def getTileFromPile()
+
+  def drawTileFromPile(index: Int): Validated[Int, Tile] = (index > pile.length) match {
+    case true => Invalid(index)
+    case false => 
+  }
 
   def announcePlayer: Unit = println(s"Now playing: ${this.name}")
 
-  def printDeck: Unit =
-    for (i <- this.pile) {
-      i.print
-    }
+  def printDeck: String =
+    for (i <- this.pile;
+         deck = deck + i ) yield deck
 }
 
 object Player {
-  def position(boneyard: Vector[Tile]): Int = {
+  def position(boneyard: Deck[Tile]): Int = {
     val start = 0
     val end = boneyard.length
     val rnd = new scala.util.Random
     start + rnd.nextInt((end - start) + 1)
   }
 
-  def fillDeck(deck: Vector[Tile], boneyard: Vector[Tile]): Vector[Tile] =
+  def fillDeck(deck: Deck[Tile], boneyard: Deck[Tile]): Deck[Tile] =
     deck.length match {
       case 7 => deck
       case _ => fillDeck(deck :+ boneyard.take(position(boneyard)).last, boneyard.diff(deck))
     }
 
-  def apply(name: String, boneyard: Vector[Tile]): Player = Player(name, fillDeck(new Vector[Tile], boneyard))
+  def apply(name: String, boneyard: Deck[Tile]): Player = Player(name, fillDeck(Deck[Tile](new Vector, new Vector), boneyard))
 }
 
 
 sealed trait Game {
   def player1: Player
   def player2: Player
-  def boneyard: Vector[Tile]
-  def openends: Vector[Int]
-  def last: Int
+  def boneyard: Deck[Tile]
+  def openends: Deck[Tile]
 
-  def graphics(which: Int): Unit = which match {
-    case 0 => println(s"_______________\n|               |\n|               |\n|               |\n|               |\n|               |\n|               |\n|_______________|")
-    case 1 => println(s"_______________\n|               |\n|               |\n|       _       |\n|      |_|      |\n|               |\n|               |\n|_______________|")
-    case 2 => println(s"_______________\n|            _  |\n|           |_| |\n|               |\n|               |\n|  _            |\n| |_|           |\n|_______________|")
-    case 3 => println(s"_______________\n|            _  |\n|           |_| |\n|       _       |\n|      |_|      |\n|  _            |\n| |_|           |\n|_______________|")
-    case 4 => println(s"_______________\n|  _         _  |\n| |_|       |_| |\n|               |\n|               |\n|  _         _  |\n| |_|       |_| |\n|_______________|")
-    case 5 => println(s"_______________\n|  _         _  |\n| |_|       |_| |\n|       _       |\n|      |_|      |\n|  _         _  |\n| |_|       |_| |\n|_______________|")
-    case 6 => println(s"_______________\n|  _         _  |\n| |_|       |_| |\n|  _         _  |\n| |_|       |_| |\n|  _         _  |\n| |_|       |_| |\n|_______________|")
-    case _ => println(s"\n\n\n\n\n\n\n\n")
-  }
-
-  def passMove(currentPlayer: Int, boneyard: Vector[Tile]): Unit = graphics(last)
-
-  def nextOpenEnd(currentPlayer: Int, boneyard: Vector[Tile]): Unit = ???
-
-  def drawTile(currentPlayer: Int, boneyard: Vector[Tile]): Unit = {
-    if (currentPlayer == 1) {
-      player1.drawTile(boneyard)
-    }else{
-      player2.drawTile(boneyard)
+  def toInt(s: String): Option[Int] = {
+    try {
+      Some(s.toInt)
+    } catch {
+      case e: Exception => None
     }
-    graphics(last)
   }
 
-  def pickTile(currentPlayer: Int, boneyard: Vector[Tile]): Unit = ???
+  def graphics(which: Int): String = which match {
+    case 0 => s"_______________\n|               |\n|               |\n|               |\n|               |\n|               |\n|               |\n|_______________|\n"
+    case 1 => s"_______________\n|               |\n|               |\n|       _       |\n|      |_|      |\n|               |\n|               |\n|_______________|\n"
+    case 2 => s"_______________\n|            _  |\n|           |_| |\n|               |\n|               |\n|  _            |\n| |_|           |\n|_______________|\n"
+    case 3 => s"_______________\n|            _  |\n|           |_| |\n|       _       |\n|      |_|      |\n|  _            |\n| |_|           |\n|_______________|\n"
+    case 4 => s"_______________\n|  _         _  |\n| |_|       |_| |\n|               |\n|               |\n|  _         _  |\n| |_|       |_| |\n|_______________|\n"
+    case 5 => s"_______________\n|  _         _  |\n| |_|       |_| |\n|       _       |\n|      |_|      |\n|  _         _  |\n| |_|       |_| |\n|_______________|\n"
+    case 6 => s"_______________\n|  _         _  |\n| |_|       |_| |\n|  _         _  |\n| |_|       |_| |\n|  _         _  |\n| |_|       |_| |\n|_______________|\n"
+    case _ => s"\n\n\n\n\n\n\n\n"
+  }
 
-  def identifyCommand(command: String, currentPlayer: Int, boneyard: Vector[Tile]):  Unit = command match {
-    case "-pm" => passMove(currentPlayer, boneyard)
-    case "-ne" => nextOpenEnd(currentPlayer, boneyard)
-    case "-dt" => drawTile(currentPlayer, boneyard)
-    case "-p" => pickTile(currentPlayer, boneyard)
-    case "-q" => ()
-    case _ => identifyCommand(readCommand, currentPlayer, boneyard)
+  def passMove(last: Int): String = graphics(last)
+ 
+  def nextOpenEnd(currentPlayer: Int, last: Tile, boneyard: Deck[Tile]): String = ???
+
+  def wasTileDrawn(currentPlayer: Int, boneyard: Deck[Tile]): Validated[String, Unit] = currentPlayer match {
+    case 1 => player1.drawTileFromBN(boneyard)
+    case 2 => player2.drawTileFromBN(boneyard) 
+  }
+
+  def drawTile(currentPlayer: Int, last: Tile, boneyard: Deck[Tile]): String = wasTileDrawn(currentPlayer, boneyard) match {
+    case Invalid(a) => a
+    case Valid(_) => graphics(last)
+  }
+
+  def removeThisOpenEnd(last: Tile): Vector[Tile] = openends.find(last) match {
+    case false => openends
+    case true => openends.filter(_ == last)
+  }
+
+  def pickTile(currentPlayer: Int, last: Tile, boneyard: Deck[Tile]): String = readCommand.toInt match {
+    case Option(None) => pickTile(currentPlayer, last, boneyard)
+    case Option(num) => currentPlayer match {
+      case 1 => player1.pile.use(num)
+    }
+  }
+        println!("dominogame: ~ $ Pick:");
+
+        let mut num = String::new();
+
+        match io::stdin().read_line(&mut num) {
+          Err(e) => panic!("couldn't read the number: {}", e),
+          Ok(f) => f,
+        };
+
+
+        let mut chosen = num.trim().chars().next().unwrap().to_digit(10).unwrap() as usize;
+        if num.trim().len()>1 {
+
+          chosen = 10*chosen + num.trim().chars().next().unwrap().to_digit(10).unwrap() as usize;
+
+        }
+
+        &self.graphics(self.last);
+
+        if (chosen <= self.player1.pile.len() && cur == 1) ||
+        (chosen <= self.player2.pile.len() && cur == 2) {
+
+          if self.openends.len() > 0 {
+
+            let mut index = 0;
+
+            for l in &self.openends {
+
+              if l == &self.last {
+                break;
+              }
+
+              index = index + 1;
+
+            }
+
+            if index < self.openends.len() {
+
+              &self.openends.remove(index);
+
+            }
+
+          }else{
+
+            first = true;
+
+          }
+
+          if cur == 1 {
+
+            let picked = self.player1.pile.remove(chosen-1);
+
+            if picked.a != self.last {
+
+              &self.graphics(picked.b);
+              &self.graphics(picked.a);
+              self.last = picked.a;
+
+            }else {
+
+              &self.graphics(picked.a);
+              &self.graphics(picked.b);
+              self.last = picked.b;
+
+            }
+
+            if picked.a == picked.b || first {
+
+              &self.openends.push(picked.a);
+              &self.openends.push(picked.b);
+
+            }
+
+            if picked.a != self.last && picked.b != self.last {
+
+              println!("Wrong move, but your funeral...");
+
+            }
+
+          }else{
+
+            let picked = self.player2.pile.remove(chosen-1);
+
+            if picked.a != self.last {
+
+              &self.graphics(picked.b);
+              &self.graphics(picked.a);
+              self.last = picked.a;
+
+            }else {
+
+              &self.graphics(picked.a);
+              &self.graphics(picked.b);
+              self.last = picked.b;
+
+            }
+
+            if picked.a == picked.b || first {
+
+              &self.openends.push(picked.a);
+              &self.openends.push(picked.b);
+
+            }
+
+            if picked.a != self.last && picked.b != self.last {
+
+              println!("Wrong move, but your funeral...");
+
+            }
+
+          }
+
+          if !first {
+
+            &self.openends.push(self.last);
+
+          }
+
+          let ten_millis = time::Duration::from_millis(1000);
+          thread::sleep(ten_millis);
+
+          pickedmove = true;
+
+        }
+
+  def identifyCommand(currentPlayer: Int, last: Tile, boneyard: Deck[Tile]):  String = readCommand match {
+    case "-pm" => passMove(last)
+    case "-ne" => nextOpenEnd(currentPlayer, last, boneyard)
+    case "-dt" => drawTile(currentPlayer, last, boneyard)
+    case "-p" => pickTile(currentPlayer, last, boneyard)
+    case "-q" => ""
+    case _ => identifyCommand(currentPlayer, last, boneyard)
   }
 
   def readCommand: String = {
@@ -407,15 +581,17 @@ sealed trait Game {
     StdIn.readLine
   }
 
-  def zeroOpenends: Unit =
+  def zeroOpenends: String =
     if (openends.length == 0) {
-      graphics(7);
-      graphics(7);
-  }
+      graphics(7) + graphics(7)
+    }else {
+      ""
+    }
+
 
   def checkPlayer(currentPlayer: Int): Unit = currentPlayer match {
-    case 1 => player1.printDeck
-    case 2 => player2.printDeck
+    case 1 => println(player1.printDeck)
+    case 2 => println(player2.printDeck)
   }
 
   def pickMoveLoop(currentPlayer: Int): Boolean = {
@@ -798,6 +974,8 @@ object Game {
 }else{
 
   again = false;
+
+}
 
 }
 
