@@ -1,4 +1,3 @@
-import Player.position
 import scala.io.StdIn
 
 sealed trait Chain[+A] {
@@ -309,27 +308,37 @@ object Validated {
 
 sealed trait Deck[+A] {
   def main: Vector[A]
+
   def used: Vector[A]
 
   def isEmpty: Boolean = main.diff(used).isEmpty
 
   def length: Int = unused.length
 
-  def unused[B]: Vector[B] = main.diff(used)
+  def last: A = main.last
 
-  def add[B](back: B): Deck[B] = Deck[B](this.main :+ back, this.used) 
+  def unused: Vector[A] = main.diff(used)
 
-  def use[B](index: Int): Validated[Int, B] = unused.isEmpty match {
-    case true => Invalid(-1)
-    case false => (index > unused.length || index < 0) match {
+  def add[A](back: A): Deck[A] = Deck[A](this.main :+ back, this.used)
+
+  def use[A](back: A): Deck[A] = Deck[A](this.main, this.used :+ back)
+
+  def find[A](piece: A): Option[A] = unused.find(_ == piece)
+
+  def getAt[A](index: Int): Validated[Int, A] =
+    unused.isEmpty || (index > unused.length || index < 0) match {
       case true => Invalid(index)
-      case false => {
-        val item: B = unused(index)
-        used :+ item
-        Valid(item)
-      }
+      case false => Valid(unused(index))
+    }
+
+  def randomPosition: Int = {
+    val start = 0
+    val end = length
+    val rnd = new scala.util.Random
+    start + rnd.nextInt((end - start) + 1)
   }
 }
+
 
 object Deck {
   def apply[A](m: Vector[A], u: Vector[A]): Deck[A] = Deck[A](m, u)
@@ -340,7 +349,11 @@ sealed trait Tile {
 
   def b: Int
 
-  def print: String = s"${a}, ${b} "
+  def ==(t: Tile): Boolean = this.a == t.a && this.b == t.b
+
+  def !=(t: Tile): Boolean = !(this == t)
+
+  def print: String = s"$a, $b "
 }
 
 object Tile {
@@ -352,57 +365,57 @@ sealed trait Player {
 
   def pile: Deck[Tile]
 
-  def getTileFromBN(boneyard: Deck[Tile], position: Int): Deck[Tile] = pile.add(boneyard.use(position(boneyard)))
+  def getTileFromBN(boneyard: Deck[Tile], position: Int): Deck[Tile] = boneyard.getAt(position) match {
+    case Invalid(_) => pile
+    case Valid(t) => pile.add(t)
+  }
 
-  def drawTileFromBN(boneyard: Vector[Tile]): Validated[String, Unit] =
-    boneyardLeftovers(boneyard).length match {
+  def drawTileFromBN(boneyard: Deck[Tile]): Validated[String, Deck[Tile]] =
+    boneyard.length match {
       case 0 => Invalid("Boneyard is empty!")
-      case _ => Valid(getTileFromBN(boneyard, position(boneyard)))
+      case _ => Valid(getTileFromBN(boneyard, boneyard.randomPosition))
     }
 
-  def getTileFromPile()
-
-  def drawTileFromPile(index: Int): Validated[Int, Tile] = (index > pile.length) match {
-    case true => Invalid(index)
-    case false => 
-  }
+  def drawTileFromPile(index: Int): Validated[String, Tile] =  pile.getAt(index) match {
+      case Invalid(_) => Invalid("Invalid index!")
+      case p @ Valid(t) =>
+        pile.use(t)
+        p
+    }
 
   def announcePlayer: Unit = println(s"Now playing: ${this.name}")
 
-  def printDeck: String =
-    for (i <- this.pile;
-         deck = deck + i ) yield deck
+  def printDeck: Unit = for (piece: Tile <- pile) println(piece.print)
 }
 
 object Player {
-  def position(boneyard: Deck[Tile]): Int = {
-    val start = 0
-    val end = boneyard.length
-    val rnd = new scala.util.Random
-    start + rnd.nextInt((end - start) + 1)
-  }
-
   def fillDeck(deck: Deck[Tile], boneyard: Deck[Tile]): Deck[Tile] =
     deck.length match {
       case 7 => deck
-      case _ => fillDeck(deck :+ boneyard.take(position(boneyard)).last, boneyard.diff(deck))
+      case _ => boneyard.use(boneyard.randomPosition) match {
+        case Invalid(_) => fillDeck(deck, boneyard)
+        case Valid(t: Tile) => fillDeck(deck.add(t), boneyard)
+      }
     }
 
-  def apply(name: String, boneyard: Deck[Tile]): Player = Player(name, fillDeck(Deck[Tile](new Vector, new Vector), boneyard))
+  def apply(name: String, boneyard: Deck[Tile]): Player = Player(name, fillDeck(Deck[Tile](new Vector[Tile], new Vector[Tile]), boneyard))
 }
 
 
 sealed trait Game {
   def player1: Player
+
   def player2: Player
+
   def boneyard: Deck[Tile]
+
   def openends: Deck[Tile]
 
   def toInt(s: String): Option[Int] = {
     try {
       Some(s.toInt)
     } catch {
-      case e: Exception => None
+      case _: Exception => None
     }
   }
 
@@ -417,157 +430,105 @@ sealed trait Game {
     case _ => s"\n\n\n\n\n\n\n\n"
   }
 
-  def passMove(last: Int): String = graphics(last)
- 
-  def nextOpenEnd(currentPlayer: Int, last: Tile, boneyard: Deck[Tile]): String = ???
+  def passMove(last: Tile): String = graphics(last.b)
 
-  def wasTileDrawn(currentPlayer: Int, boneyard: Deck[Tile]): Validated[String, Unit] = currentPlayer match {
-    case 1 => player1.drawTileFromBN(boneyard)
-    case 2 => player2.drawTileFromBN(boneyard) 
-  }
+  def nextOpenEnd(currentPlayer: Player, last: Tile, boneyard: Deck[Tile]): String = {
+    let mut iter = self.openends.iter();
+    let mut again: bool = true;
+    let mut c = 1;
+    let len = self.openends.len();
 
-  def drawTile(currentPlayer: Int, last: Tile, boneyard: Deck[Tile]): String = wasTileDrawn(currentPlayer, boneyard) match {
-    case Invalid(a) => a
-    case Valid(_) => graphics(last)
-  }
+    while again {
 
-  def removeThisOpenEnd(last: Tile): Vector[Tile] = openends.find(last) match {
-    case false => openends
-    case true => openends.filter(_ == last)
-  }
+      let nextone = iter.next();
 
-  def pickTile(currentPlayer: Int, last: Tile, boneyard: Deck[Tile]): String = readCommand.toInt match {
-    case Option(None) => pickTile(currentPlayer, last, boneyard)
-    case Option(num) => currentPlayer match {
-      case 1 => player1.pile.use(num)
-    }
-  }
-        println!("dominogame: ~ $ Pick:");
+      if nextone == None {
 
-        let mut num = String::new();
+        iter = self.openends.iter();
+        self.last = *iter.next().unwrap();
+        c = 1;
 
-        match io::stdin().read_line(&mut num) {
-          Err(e) => panic!("couldn't read the number: {}", e),
-          Ok(f) => f,
-        };
+      }else{
 
+        self.last = *nextone.unwrap();
 
-        let mut chosen = num.trim().chars().next().unwrap().to_digit(10).unwrap() as usize;
-        if num.trim().len()>1 {
+      }
 
-          chosen = 10*chosen + num.trim().chars().next().unwrap().to_digit(10).unwrap() as usize;
+      &self.graphics(self.last);
+      &self.graphics(7);
 
-        }
+      println!("Open ends: {} (out of {})", c, len);
 
+      if cur == 1 {
+
+        self.player1.print();
+
+      }else{
+
+        self.player2.print();
+
+      }
+
+      println!("dominogame: ~ $ Again?([-y] - Yes, [-n] - No):");
+
+      let mut choice = String::new();
+
+      match io::stdin().read_line(&mut choice) {
+        Err(e) => panic!("couldn't read the command: {}", e),
+        Ok(f) => f,
+      };
+
+      if choice.trim() == "-n" {
+
+        again = false;
         &self.graphics(self.last);
 
-        if (chosen <= self.player1.pile.len() && cur == 1) ||
-        (chosen <= self.player2.pile.len() && cur == 2) {
+      }else{
 
-          if self.openends.len() > 0 {
+        c = c + 1;
 
-            let mut index = 0;
+      }
 
-            for l in &self.openends {
+    }
 
-              if l == &self.last {
-                break;
-              }
+  }
 
-              index = index + 1;
+  def wasTileDrawn(currentPlayer: Player, boneyard: Deck[Tile]): Validated[String, Deck[Tile]] = currentPlayer.drawTileFromBN(boneyard)
 
-            }
+  def drawTile(currentPlayer: Player, last: Tile, boneyard: Deck[Tile]): String = wasTileDrawn(currentPlayer, boneyard) match {
+    case Invalid(Chain(a)) => a
+    case Valid(_) => graphics(last.b)
+  }
 
-            if index < self.openends.len() {
-
-              &self.openends.remove(index);
-
-            }
-
-          }else{
-
-            first = true;
-
-          }
-
-          if cur == 1 {
-
-            let picked = self.player1.pile.remove(chosen-1);
-
-            if picked.a != self.last {
-
-              &self.graphics(picked.b);
-              &self.graphics(picked.a);
-              self.last = picked.a;
-
-            }else {
-
-              &self.graphics(picked.a);
-              &self.graphics(picked.b);
-              self.last = picked.b;
-
-            }
-
-            if picked.a == picked.b || first {
-
-              &self.openends.push(picked.a);
-              &self.openends.push(picked.b);
-
-            }
-
-            if picked.a != self.last && picked.b != self.last {
-
-              println!("Wrong move, but your funeral...");
-
-            }
-
-          }else{
-
-            let picked = self.player2.pile.remove(chosen-1);
-
-            if picked.a != self.last {
-
-              &self.graphics(picked.b);
-              &self.graphics(picked.a);
-              self.last = picked.a;
-
-            }else {
-
-              &self.graphics(picked.a);
-              &self.graphics(picked.b);
-              self.last = picked.b;
-
-            }
-
-            if picked.a == picked.b || first {
-
-              &self.openends.push(picked.a);
-              &self.openends.push(picked.b);
-
-            }
-
-            if picked.a != self.last && picked.b != self.last {
-
-              println!("Wrong move, but your funeral...");
-
-            }
-
-          }
-
-          if !first {
-
-            &self.openends.push(self.last);
-
-          }
-
-          let ten_millis = time::Duration::from_millis(1000);
-          thread::sleep(ten_millis);
-
-          pickedmove = true;
-
+  def pickTile(currentPlayer: Player, last: Tile, boneyard: Deck[Tile]): String = toInt(readCommand) match {
+    case None => pickTile(currentPlayer, last, boneyard)
+    case Some(num) => currentPlayer.drawTileFromPile(num) match {
+      case Invalid(_) => pickTile(currentPlayer, last, boneyard)
+      case Valid(t) => openends.isEmpty match {
+        case true => {
+          openends.add(t)
+          graphics(t.b)
         }
+        case false => t.a != last.b && t.b != last.b match {
+          case true => pickTile(currentPlayer, last, boneyard)
+          case false => t.a == last.b match {
+            case true => {
+              openends.use(last)
+              openends.add(t)
+              graphics(t.a)+graphics(t.b)
+            }
+            case false => {
+              openends.use(last)
+              openends.add(Tile (t.b, t.a) )
+              graphics(t.b)+graphics(t.a)
+            }
+          }
+        }
+      }
+    }
+  }
 
-  def identifyCommand(currentPlayer: Int, last: Tile, boneyard: Deck[Tile]):  String = readCommand match {
+  def identifyCommand(currentPlayer: Player, last: Tile, boneyard: Deck[Tile]):  String = readCommand match {
     case "-pm" => passMove(last)
     case "-ne" => nextOpenEnd(currentPlayer, last, boneyard)
     case "-dt" => drawTile(currentPlayer, last, boneyard)
@@ -576,409 +537,170 @@ sealed trait Game {
     case _ => identifyCommand(currentPlayer, last, boneyard)
   }
 
-  def readCommand: String = {
-    println(s"dominogame:~  Pick:")
-    StdIn.readLine
-  }
-
-  def zeroOpenends: String =
-    if (openends.length == 0) {
-      graphics(7) + graphics(7)
-    }else {
-      ""
+    def readCommand: String = {
+      println(s"dominogame:~  Pick:")
+      StdIn.readLine
     }
 
+    def zeroOpenends: String =
+      if (openends.isEmpty) {
+        graphics(7) + graphics(7)
+      }else {
+        ""
+      }
 
-  def checkPlayer(currentPlayer: Int): Unit = currentPlayer match {
-    case 1 => println(player1.printDeck)
-    case 2 => println(player2.printDeck)
-  }
+    def playerInfo(currentPlayer: Player): Unit = {
+      currentPlayer.announcePlayer
+      currentPlayer.printDeck
+    }
 
-  def pickMoveLoop(currentPlayer: Int): Boolean = {
+    def pickMoveLoop(currentPlayer: Player): Boolean = ???
 
-    let mut pickedmove: bool = false;
-    let mut quit: bool = false;
-    let mut first: bool = false;
+    def playerScheduler( quit: Boolean, currentPlayer: Int): Unit = player1.pile.length > 0 && player2.pile.length > 0 && !quit match {
+      case true => currentPlayer match {
+        case 1 => playerScheduler(pickMoveLoop(player1), 2)
+        case 2 => playerScheduler(pickMoveLoop(player2), 1)
+      }
+      case false => println(s"dominogame:~ Calculating results...")
+    }
 
-    while !pickedmove && !quit {
+    def gameloop: Unit = {
 
+      playerScheduler(false, 1)
 
+      if (player1.pile.length == 0) {
 
+        println(s"dominogame:~ ${player1.name} IS THE WINNER")
 
+      }else if (player2.pile.length == 0) {
 
-      let mut command = String::new();
-
-
-
-      match io::stdin().read_line(&mut command) {
-        Err(e) => panic!("couldn't read the command: {}", e),
-        Ok(f) => f,
-      };
-
-      if command.trim() == "-pm" {
-
-        &self.graphics(self.last);
-
-      }else if command.trim() == "-ne"{
-
-        let mut iter = self.openends.iter();
-        let mut again: bool = true;
-        let mut c = 1;
-        let len = self.openends.len();
-
-        while again {
-
-          let nextone = iter.next();
-
-          if nextone == None {
-
-            iter = self.openends.iter();
-            self.last = *iter.next().unwrap();
-            c = 1;
-
-          }else{
-
-            self.last = *nextone.unwrap();
-
-          }
-
-          &self.graphics(self.last);
-          &self.graphics(7);
-
-          println!("Open ends: {} (out of {})", c, len);
-
-          if cur == 1 {
-
-            self.player1.print();
-
-          }else{
-
-            self.player2.print();
-
-          }
-
-          println!("dominogame: ~ $ Again?([-y] - Yes, [-n] - No):");
-
-          let mut choice = String::new();
-
-          match io::stdin().read_line(&mut choice) {
-            Err(e) => panic!("couldn't read the command: {}", e),
-            Ok(f) => f,
-          };
-
-          if choice.trim() == "-n" {
-
-            again = false;
-            &self.graphics(self.last);
-
-          }else{
-
-            c = c + 1;
-
-          }
-
-        }
-      }else if command.trim() == "-dp"{
-
-        if cur == 1 {
-
-          self.player1.draw_tile(&mut self.boneyard);
-
-        }else{
-
-          self.player2.draw_tile(&mut self.boneyard);
-
-        }
-
-        &self.graphics(self.last);
-
-      }else if command.trim() == "-p" {
-
-        println!("dominogame: ~ $ Pick:");
-
-        let mut num = String::new();
-
-        match io::stdin().read_line(&mut num) {
-          Err(e) => panic!("couldn't read the number: {}", e),
-          Ok(f) => f,
-        };
-
-
-        let mut chosen = num.trim().chars().next().unwrap().to_digit(10).unwrap() as usize;
-        if num.trim().len()>1 {
-
-          chosen = 10*chosen + num.trim().chars().next().unwrap().to_digit(10).unwrap() as usize;
-
-        }
-
-        &self.graphics(self.last);
-
-        if (chosen <= self.player1.pile.len() && cur == 1) ||
-        (chosen <= self.player2.pile.len() && cur == 2) {
-
-          if self.openends.len() > 0 {
-
-            let mut index = 0;
-
-            for l in &self.openends {
-
-              if l == &self.last {
-                break;
-              }
-
-              index = index + 1;
-
-            }
-
-            if index < self.openends.len() {
-
-              &self.openends.remove(index);
-
-            }
-
-          }else{
-
-            first = true;
-
-          }
-
-          if cur == 1 {
-
-            let picked = self.player1.pile.remove(chosen-1);
-
-            if picked.a != self.last {
-
-              &self.graphics(picked.b);
-              &self.graphics(picked.a);
-              self.last = picked.a;
-
-            }else {
-
-              &self.graphics(picked.a);
-              &self.graphics(picked.b);
-              self.last = picked.b;
-
-            }
-
-            if picked.a == picked.b || first {
-
-              &self.openends.push(picked.a);
-              &self.openends.push(picked.b);
-
-            }
-
-            if picked.a != self.last && picked.b != self.last {
-
-              println!("Wrong move, but your funeral...");
-
-            }
-
-          }else{
-
-            let picked = self.player2.pile.remove(chosen-1);
-
-            if picked.a != self.last {
-
-              &self.graphics(picked.b);
-              &self.graphics(picked.a);
-              self.last = picked.a;
-
-            }else {
-
-              &self.graphics(picked.a);
-              &self.graphics(picked.b);
-              self.last = picked.b;
-
-            }
-
-            if picked.a == picked.b || first {
-
-              &self.openends.push(picked.a);
-              &self.openends.push(picked.b);
-
-            }
-
-            if picked.a != self.last && picked.b != self.last {
-
-              println!("Wrong move, but your funeral...");
-
-            }
-
-          }
-
-          if !first {
-
-            &self.openends.push(self.last);
-
-          }
-
-          let ten_millis = time::Duration::from_millis(1000);
-          thread::sleep(ten_millis);
-
-          pickedmove = true;
-
-        }
-
-
-      } else if command.trim() == "-q" {
-
-        quit = true;
+        println(s"dominogame:~ ${player2.name} IS THE WINNER")
 
       }
 
-      &self.graphics(7);
+      println("\ndominogame:~ GOOD GAME, BYE!")
 
+      graphics(7)
     }
-
-    quit
-
   }
 
-  def playerScheduler( quit: Boolean, currentPlayer: Int): Unit = player1.pile.length > 0 && player2.pile.length > 0 && !quit match {
-    case true => currentPlayer match {
-      case 1 => playerScheduler(pickMoveLoop(1), 2)
-      case 2 => playerScheduler(pickMoveLoop(2), 1)
-    }
-    case false => println(s"dominogame:~ Calculating results...")
-  }
+  object Game {
+    def apply -> Self {
 
-  def gameloop: Unit = {
+      let mut b = Vec::new();
+      let mut k = 0;
+      let mut i = 0;
+      let mut j = 0;
 
-    playerScheduler(false, 1)
+      while k < 28 {
 
-    if (player1.pile.length == 0) {
+        let t = Tile::new(i,j);
+        b.push(t);
 
-      println(s"dominogame:~ ${player1.name} IS THE WINNER")
+        k = k + 1;
 
-    }else if (player2.pile.length == 0) {
+        if i==j {
 
-      println(s"dominogame:~ ${player2.name} IS THE WINNER")
+          i = 0;
+          j = j+1;
 
-    }
+        }else {
 
-    println("\ndominogame:~ GOOD GAME, BYE!")
+          i = i + 1;
 
-    graphics(7)
-  }
-}
+        }
 
-object Game {
-  def apply -> Self {
+      }
 
-  let mut b = Vec::new();
-  let mut k = 0;
-  let mut i = 0;
-  let mut j = 0;
+      println!("////////////////////////////////////////////////////////////////////////////////
+        ////////////////////////////////   Welcome to:   ///////////////////////////////
+        ////////////////////   [-S-Y-S-A-D-M-I-N-] DRAW DOMINOES   /////////////////////
+        ////////////////////////////////////////////////////////////////////////////////
+        (*) Instructions:
+        $> [ -p ] - command for picking a tile to make your
+        move with and you'll be asked to pick it's subsequent
+        number in your pile
+        $> [ -ne ] - command for displaying another open end
+        $> [ -dp ] - command for drawing another tile from
+        the boneyard
+        $> [ -pm ] - command for passing a move
+      $> [ -q ] - command for quiting the game");
 
-  while k < 28 {
+        println!();println!();
 
-  let t = Tile::new(i,j);
-  b.push(t);
+        let mut name1 = String::new();
 
-  k = k + 1;
+        println!("dominogame: ~ $ Name of Player1:");
 
-  if i==j {
+        match io::stdin().read_line(&mut name1) {
+        Err(e) => panic!("couldn't read the name of player1: {}", e),
+        Ok(f) => f,
+        };
 
-  i = 0;
-  j = j+1;
+        let mut name2 = String::new();
 
-}else {
+        println!("dominogame: ~ $ Name of Player2:");
 
-  i = i + 1;
+        match io::stdin().read_line(&mut name2) {
+        Err(e) => panic!("couldn't read the name of player2: {}", e),
+        Ok(f) => f,
+        };
 
-}
+        let p1 = Player::new(&name1.trim(),&mut b);
+        let p2 = Player::new(&name2.trim(),&mut b);
 
-}
+        let g = Game {
+        player1: p1,
+        player2: p2,
+        boneyard: b,
+        openends: Vec::new(),
+        last: 7,
+        };
 
-  println!("////////////////////////////////////////////////////////////////////////////////
-  ////////////////////////////////   Welcome to:   ///////////////////////////////
-  ////////////////////   [-S-Y-S-A-D-M-I-N-] DRAW DOMINOES   /////////////////////
-  ////////////////////////////////////////////////////////////////////////////////
-  (*) Instructions:
-  $> [ -p ] - command for picking a tile to make your
-  move with and you'll be asked to pick it's subsequent
-  number in your pile
-  $> [ -ne ] - command for displaying another open end
-  $> [ -dp ] - command for drawing another tile from
-  the boneyard
-  $> [ -pm ] - command for passing a move
-  $> [ -q ] - command for quiting the game");
+        g
 
-  println!();println!();
-
-  let mut name1 = String::new();
-
-  println!("dominogame: ~ $ Name of Player1:");
-
-  match io::stdin().read_line(&mut name1) {
-  Err(e) => panic!("couldn't read the name of player1: {}", e),
-  Ok(f) => f,
-};
-
-  let mut name2 = String::new();
-
-  println!("dominogame: ~ $ Name of Player2:");
-
-  match io::stdin().read_line(&mut name2) {
-  Err(e) => panic!("couldn't read the name of player2: {}", e),
-  Ok(f) => f,
-};
-
-  let p1 = Player::new(&name1.trim(),&mut b);
-  let p2 = Player::new(&name2.trim(),&mut b);
-
-  let g = Game {
-  player1: p1,
-  player2: p2,
-  boneyard: b,
-  openends: Vec::new(),
-  last: 7,
-};
-
-  g
-
-}
+        }
 
 
 
 
 
-}
+        }
 
-  fn main(){
+        fn main(){
 
-  let mut again: bool = true;
+        let mut again: bool = true;
 
-  while again {
+        while again {
 
-  let mut gameplay = Game::new();
+        let mut gameplay = Game::new();
 
-  gameplay.gameloop();
+        gameplay.gameloop();
 
-  let mut command = String::new();
+        let mut command = String::new();
 
-  println!("dominogame: ~ $ Would you like to play again?");
-  println!();
-  println!("dominogame: ~ $ ([-y] for Yes and [-n] for No): ");
+        println!("dominogame: ~ $ Would you like to play again?");
+        println!();
+        println!("dominogame: ~ $ ([-y] for Yes and [-n] for No): ");
 
-  match io::stdin().read_line(&mut command) {
-  Err(e) => panic!("couldn't read the command: {}", e),
-  Ok(f) => f,
-};
+        match io::stdin().read_line(&mut command) {
+        Err(e) => panic!("couldn't read the command: {}", e),
+        Ok(f) => f,
+        };
 
-  if command.trim() == "-n" {
+        if command.trim() == "-n" {
 
-  again = false;
+        again = false;
 
-} else if command.trim() == "-y" {
-}else{
+        } else if command.trim() == "-y" {
+        }else{
 
-  again = false;
+        again = false;
 
-}
+        }
 
-}
+        }
 
-}
+        }
 
-}
+        }
