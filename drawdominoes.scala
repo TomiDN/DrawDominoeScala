@@ -319,6 +319,8 @@ sealed trait Deck[+A] {
 
   def unused: Vector[A] = main.diff(used)
 
+  def indexOf(elem: A): Int = unused.indexOf(elem)
+
   def add[A](back: A): Deck[A] = Deck[A](this.main :+ back, this.used)
 
   def use[A](back: A): Deck[A] = Deck[A](this.main, this.used :+ back)
@@ -432,65 +434,32 @@ sealed trait Game {
 
   def passMove(last: Tile): String = graphics(last.b)
 
-  def nextOpenEnd(currentPlayer: Player, last: Tile, boneyard: Deck[Tile]): String = {
-    let mut iter = self.openends.iter();
-    let mut again: bool = true;
-    let mut c = 1;
-    let len = self.openends.len();
+  def newLast(last: Tile, newLast: Tile): Tile = ???
 
-    while again {
-
-      let nextone = iter.next();
-
-      if nextone == None {
-
-        iter = self.openends.iter();
-        self.last = *iter.next().unwrap();
-        c = 1;
-
-      }else{
-
-        self.last = *nextone.unwrap();
-
+  def showNextOpenEnd(last: Tile): String = openends.indexOf(last) match {
+      case -1 => graphics(last.b) + graphics(7)
+      case n => openends.getAt(n) match {
+        case Invalid(_) => graphics(last.b) + graphics(7)
+        case Valid(t) => graphics(t.b) + graphics(7) 
       }
-
-      &self.graphics(self.last);
-      &self.graphics(7);
-
-      println!("Open ends: {} (out of {})", c, len);
-
-      if cur == 1 {
-
-        self.player1.print();
-
-      }else{
-
-        self.player2.print();
-
-      }
-
-      println!("dominogame: ~ $ Again?([-y] - Yes, [-n] - No):");
-
-      let mut choice = String::new();
-
-      match io::stdin().read_line(&mut choice) {
-        Err(e) => panic!("couldn't read the command: {}", e),
-        Ok(f) => f,
-      };
-
-      if choice.trim() == "-n" {
-
-        again = false;
-        &self.graphics(self.last);
-
-      }else{
-
-        c = c + 1;
-
-      }
-
     }
 
+  def nextOpenEndMessage(last: Tile): String = 
+    showNextOpenEnd(last) + 
+    s"Open ends: $(n+1) (out of $openends.length)"
+    
+  def nextOpenEndMenu(currentPlayer: Player, last: Tile): Unit = {
+    println(nextOpenEndMessage(last))
+    currentPlayer.printDeck 
+    println(s"dominogame: ~ $ Again?([-y] - Yes, [-n] - No):")
+  }
+
+  def nextOpenEnd(currentPlayer: Player, last: Tile): String = {
+    nextOpenEndMenu(currentPlayer, last)
+    StdIn.readLine match {
+      case "-n" => graphics(last.b)
+      case _ => nextOpenEnd(currentPlayer, last)
+    }
   }
 
   def wasTileDrawn(currentPlayer: Player, boneyard: Deck[Tile]): Validated[String, Deck[Tile]] = currentPlayer.drawTileFromBN(boneyard)
