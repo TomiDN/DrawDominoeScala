@@ -321,7 +321,7 @@ class Tile(val a: Int, val b: Int) {
 
   def !=(t: Tile): Boolean = !(this == t)
 
-  def print: String = s"$a, $b "
+  def print: String = s"$a|$b "
 
 }
 
