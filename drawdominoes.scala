@@ -311,7 +311,7 @@ case class DominoDeck[+A](main: Vector[A], used: Vector[A]) extends Deck[A]
 
 object Deck {
 
-  def apply[A](m: Vector[A], u: Vector[A]): Deck[A] = DominoDeck[A](m, u)
+  def apply[A](m: Vector[A]): Deck[A] = DominoDeck[A](m, new Vector[A])
 
 }
 
@@ -384,7 +384,7 @@ object Player {
 
     }
 
-  def apply(name: String, boneyard: Deck[Tile]): Player = new Player(name, fillDeck(Deck[Tile](new Vector[Tile], new Vector[Tile]), boneyard))
+  def apply(name: String, boneyard: Deck[Tile]): Player = new Player(name, fillDeck(Deck[Tile](new Vector[Tile]), boneyard))
 
 }
 
@@ -711,7 +711,7 @@ object Game {
 
   def apply(): Game = {
 
-      val boneyard: Deck[Tile] = new Deck[Tile](createBoneyard(new Vector[Tile]), new Vector[Tile])
+      val boneyard: Deck[Tile] = new Deck[Tile](createBoneyard(new Vector[Tile]))
 
       instructions
 
