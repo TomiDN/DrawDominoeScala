@@ -283,11 +283,11 @@ sealed trait Deck[+A] {
 
   def find[A](piece: A): Option[A] = unused.find(_ == piece)
 
-  def getAt[A](index: Int): Validated[Int, A] =
+  def getAt[A](index: Int): Validated[String, A] =
 
     unused.isEmpty || (index > unused.length || index < 0) match {
 
-      case true => Invalid(index)
+      case true => Invalid(s"Invalid index!")
 
       case false => Valid(unused(index))
 
@@ -351,7 +351,7 @@ class Player(val name: String, val pile: Deck[Tile]) {
 
   def drawTileFromPile(index: Int): Validated[String, Tile] =  pile.getAt(index) match {
 
-    case Invalid(_) => Invalid("Invalid index!")
+    case i @ Invalid(_) => i
 
     case p @ Valid(t) =>
 
@@ -490,7 +490,7 @@ class Game(val player1: Player,
 
     case n => openends.getAt(n) match {
 
-      case Invalid(_) => graphics(lastEnd.b) + graphics(7) + s"Wrong index!"
+      case Invalid(a) => graphics(lastEnd.b) + graphics(7) + a
 
       case Valid(t: Tile) => graphics(newLast(t).b) + graphics(7) + s"Open ends: ${n+1} (out of $openends.length)"
 
