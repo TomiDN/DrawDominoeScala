@@ -701,13 +701,21 @@ object Game {
     s"\n> [ -pm ] - command for passing a move" +
     s"\n> [ -q ] - command for quiting the game\n\n")
 
-  def apply(player1: String, player2: String): Game = {
+  def readPlayerName(currentPlayer: Int): String = {
+
+    println(s"dominogame:~ Name of Player ${currentPlayer}:")
+
+    StdIn.readLine
+
+  }
+
+  def apply(): Game = {
 
       val boneyard: Deck[Tile] = new Deck[Tile](createBoneyard(new Vector[Tile]), new Vector[Tile])
 
       instructions
 
-      new Game(Player(player1, boneyard), Player(player2, boneyard), boneyard)
+      new Game(Player(readPlayerName(1), boneyard), Player(readPlayerName(2), boneyard), boneyard)
 
   }
 
@@ -745,17 +753,9 @@ object DrawDominoApp {
 
   }
 
-  def readPlayerName(currentPlayer: Int): String = {
-
-    println(s"dominogame:~ Name of Player ${currentPlayer}:")
-
-    StdIn.readLine
-
-  }
-
   def main(args: Array[String]): Unit = {
 
-    runGame(Game(readPlayerName(1),readPlayerName(2)))
+    runGame(Game())
 
   }
 
