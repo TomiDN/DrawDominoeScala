@@ -307,18 +307,15 @@ sealed trait Deck[+A] {
 
 }
 
+case class DominoDeck[+A](main: Vector[A], used: Vector[A]) extends Deck[A] 
 
 object Deck {
 
-  def apply[A](m: Vector[A], u: Vector[A]): Deck[A] = Deck[A](m, u)
+  def apply[A](m: Vector[A], u: Vector[A]): Deck[A] = DominoDeck[A](m, u)
 
 }
 
-sealed trait Tile {
-
-  def a: Int
-
-  def b: Int
+class Tile(val a: Int, val b: Int) {
 
   def ==(t: Tile): Boolean = this.a == t.a && this.b == t.b
 
@@ -330,15 +327,11 @@ sealed trait Tile {
 
 object Tile {
 
-  def apply(x: Int, y: Int): Tile = Tile(x, y)
+  def apply(x: Int, y: Int): Tile = new Tile(x, y)
 
 }
 
-sealed trait Player {
-
-  def name: String
-
-  def pile: Deck[Tile]
+class Player(val name: String, val pile: Deck[Tile]) {
 
   def getTileFromBN(boneyard: Deck[Tile], position: Int): Deck[Tile] = boneyard.getAt(position) match {
 
@@ -391,22 +384,16 @@ object Player {
 
     }
 
-  def apply(name: String, boneyard: Deck[Tile]): Player = Player(name, fillDeck(Deck[Tile](new Vector[Tile], new Vector[Tile]), boneyard))
+  def apply(name: String, boneyard: Deck[Tile]): Player = new Player(name, fillDeck(Deck[Tile](new Vector[Tile], new Vector[Tile]), boneyard))
 
 }
 
 
-sealed trait Game {
-
-  def player1: Player
-
-  def player2: Player
-
-  def boneyard: Deck[Tile]
-
-  def openends: Deck[Tile]
-
-  def lastends: Deck[Tile]
+class Game(val player1: Player, 
+           val player2: Player, 
+           val boneyard: Deck[Tile], 
+           val openends: Deck[Tile] = new Deck[Tile](new Vector[Tile], new Vector[tile]), 
+           val lastends: Deck[Tile] = new Deck[Tile](new Vector[Tile], new Vector[tile])) {
 
   def toInt(s: String): Option[Int] = {
 
@@ -517,7 +504,7 @@ sealed trait Game {
 
     currentPlayer.printDeck
 
-    println(s"dominogame: ~  Again?([-y] - Yes, [-n] - No):")
+    println(s"dominogame:~  Again?([-y] - Yes, [-n] - No):")
 
   }
 
@@ -632,9 +619,9 @@ sealed trait Game {
 
     case "" => false
 
-    case
+    case visualisation: String => 
 
-      visualisation => println(visualisation)
+      println(visualisation)
 
       Thread.sleep(1000)
 
@@ -682,7 +669,7 @@ sealed trait Game {
 
 object Game {
 
-  def createBoneyard(vec: Vector[Tile], count: Int, i: Int = 0, j: Int = 0): Vector[Tile] =
+  def createBoneyard(vec: Vector[Tile], count: Int = 0, i: Int = 0, j: Int = 0): Vector[Tile] =
 
     if (count < 28){
 
@@ -712,126 +699,64 @@ object Game {
     s"\n> [ -dp ] - command for drawing another tile from" +
     s"\n the boneyard" +
     s"\n> [ -pm ] - command for passing a move" +
-    s"\n> [ -q ] - command for quiting the game\n\n");
+    s"\n> [ -q ] - command for quiting the game\n\n")
 
-  def apply(player1: String, player2: String): Game
+  def apply(player1: String, player2: String): Game = {
 
+      val boneyard: Deck[Tile] = new Deck[Tile](createBoneyard(new Vector[Tile]), new Vector[Tile])
 
+      instructions
 
-    let mut b = Vec::new();
-    let mut k = 0;
-    let mut i = 0;
-    let mut j = 0;
+      new Game(Player(player1, boneyard), Player(player2, boneyard), boneyard)
 
-    while k < 28 {
+  }
 
-      let t = Tile::new(i,j);
-      b.push(t);
-
-      k = k + 1;
-
-      if i==j {
-
-        i = 0;
-        j = j+1;
-
-      }else {
-
-        i = i + 1;
-
-      }
-
-    }
-
-    println!("////////////////////////////////////////////////////////////////////////////////
-      ////////////////////////////////   Welcome to:   ///////////////////////////////
-      ////////////////////   [-S-Y-S-A-D-M-I-N-] DRAW DOMINOES   /////////////////////
-      ////////////////////////////////////////////////////////////////////////////////
-      (*) Instructions:
-      $> [ -p ] - command for picking a tile to make your
-      move with and you'll be asked to pick it's subsequent
-      number in your pile
-      $> [ -ne ] - command for displaying another open end
-      $> [ -dp ] - command for drawing another tile from
-      the boneyard
-      $> [ -pm ] - command for passing a move
-    $> [ -q ] - command for quiting the game");
-
-      println!();println!();
-
-      let mut name1 = String::new();
-
-      println!("dominogame: ~ $ Name of Player1:");
-
-      match io::stdin().read_line(&mut name1) {
-      Err(e) => panic!("couldn't read the name of player1: {}", e),
-      Ok(f) => f,
-      };
-
-      let mut name2 = String::new();
-
-      println!("dominogame: ~ $ Name of Player2:");
-
-      match io::stdin().read_line(&mut name2) {
-      Err(e) => panic!("couldn't read the name of player2: {}", e),
-      Ok(f) => f,
-      };
-
-      let p1 = Player::new(&name1.trim(),&mut b);
-      let p2 = Player::new(&name2.trim(),&mut b);
-
-      let g = Game {
-      player1: p1,
-      player2: p2,
-      boneyard: b,
-      openends: Vec::new(),
-      last: 7,
-      };
-
-      g
-
-      }
+}
 
 
+object DrawDominoApp {
 
+  def readAnswer: String = {
 
+    println(s"dominogame:~ Would you like to play again?\n" +
+            s"\ndominogame:~ ([-y] for Yes and [-n] for No): ")
 
-      }
+    StdIn.readLine
 
-      fn main(){
+  }
 
-      let mut again: bool = true;
+  def identifyAnswer: Boolean = readAnswer match {
 
-      while again {
+    case "-y" => true
 
-      let mut gameplay = Game::new();
+    case "-n" => false
 
-      gameplay.gameloop();
+  }
 
-      let mut command = String::new();
+  def runGame(game: Game): Unit = {
 
-      println!("dominogame: ~ $ Would you like to play again?");
-      println!();
-      println!("dominogame: ~ $ ([-y] for Yes and [-n] for No): ");
+    game.gameloop
 
-      match io::stdin().read_line(&mut command) {
-      Err(e) => panic!("couldn't read the command: {}", e),
-      Ok(f) => f,
-      };
+    if (identifyAnswer) {
 
-      if command.trim() == "-n" {
+      runGame(game)
 
-      again = false;
+    } else println(s"As you wish...")
 
-      } else if command.trim() == "-y" {
-      }else{
+  }
 
-      again = false;
+  def readPlayerName(currentPlayer: Int): String = {
 
-      }
+    println(s"dominogame:~ Name of Player ${currentPlayer}:")
 
-      }
+    StdIn.readLine
 
-      }
+  }
 
-      }
+  def main(args: Array[String]): Unit = {
+
+    runGame(Game(readPlayerName(1),readPlayerName(2)))
+
+  }
+
+}
