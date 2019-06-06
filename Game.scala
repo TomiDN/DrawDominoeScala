@@ -210,7 +210,7 @@ class Game(val player1: Player,
 
   def pickMoveLoop(currentPlayer: Player): Boolean = identifyCommand(currentPlayer) match {
 
-    case "" => false
+    case "" => true
 
     case visualisation: String =>
 
