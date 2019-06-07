@@ -5,8 +5,8 @@ import scala.io.StdIn
 class Game(val player1: Player,
            val player2: Player,
            val boneyard: Deck[Tile],
-           val openends: Deck[Tile] = Deck[Tile](Nil, Nil),
-           val lastends: Deck[Tile] = Deck[Tile](Nil, Nil)) {
+           val openends: Deck[Tile] = Deck[Tile](ArrayBuffer()),
+           val lastends: Deck[Tile] = Deck[Tile](ArrayBuffer())) {
 
   def toInt(s: String): Option[Int] = {
 
@@ -149,7 +149,7 @@ class Game(val player1: Player,
 
       case Valid(t) => if (openends.isEmpty) {
 
-        openends.add(t)
+        openends.access += t
 
         graphics(t.b)
 
@@ -159,19 +159,19 @@ class Game(val player1: Player,
 
       }else if (t.a == lastEnd.b) {
 
-        openends.use(lastEnd)
+        openends.access - lastEnd
 
-        openends.add(t)
+        openends.access += t
 
         graphics(t.a) + graphics(t.b)
 
       }else {
 
-        openends.use(lastEnd)
+        openends.access - lastEnd
 
-        openends.add(Tile (t.b, t.a) )
+        openends.access += Tile(t.b, t.a)
 
-        graphics(t.b)+graphics(t.a)
+        graphics(t.b) + graphics(t.a)
 
       }
 
@@ -263,25 +263,21 @@ class Game(val player1: Player,
 
 object Game {
 
-  def createBoneyard(vec: List[Tile], count: Int = 0, i: Int = 0, j: Int = 0): List[Tile] =
+  def createBoneyard(array: ArrayBuffer[Tile], count: Int = 0, i: Int = 0, j: Int = 0): ArrayBuffer[Tile] =
 
     if (count < 28){
 
       if (i == j) {
 
-        createBoneyard(vec :+ Tile(i, j), count + 1, i, j + 1)
+        createBoneyard(array += Tile(i, j), count + 1, 0, j + 1)
 
       }else{
 
-        createBoneyard(vec :+ Tile(i, j), count + 1, i+1, j)
+        createBoneyard(array += Tile(i, j), count + 1, i+1, j)
 
       }
 
-    } else {
-
-      vec :+ Tile(i, j)
-
-    }
+    } else array
 
   def instructions(): Unit = println(s"////////////////////////////////////////////////////////////////////////////////" +
     s"\n////////////////////////////////   Welcome to:   ///////////////////////////////" +
@@ -305,7 +301,7 @@ object Game {
 
   def apply(): Game = {
 
-    val boneyard: Deck[Tile] = Deck[Tile](createBoneyard(Nil), Nil)
+    val boneyard: Deck[Tile] = Deck[Tile](createBoneyard(ArrayBuffer()))
 
     instructions()
 
