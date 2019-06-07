@@ -1,12 +1,14 @@
-package drawdominoes
+package drawdominoesgame
 
 import scala.io.StdIn
 
+import scala.collection.mutable.ArrayBuffer
+
+
 class Game(val player1: Player,
            val player2: Player,
-           val boneyard: Deck[Tile],
-           val openends: Deck[Tile] = Deck[Tile](ArrayBuffer()),
-           val lastends: Deck[Tile] = Deck[Tile](ArrayBuffer())) {
+           val boneyard: Deck,
+           val openends: Deck = Deck(ArrayBuffer())) {
 
   def toInt(s: String): Option[Int] = {
 
@@ -21,6 +23,7 @@ class Game(val player1: Player,
     }
 
   }
+
 
   def graphics(which: Int): String = which match {
 
@@ -91,29 +94,49 @@ class Game(val player1: Player,
 
   }
 
-  def lastEnd: Tile = lastends.last
 
-  def passMove: String = graphics(lastEnd.b)
+  def lastEnd: Tile = if (openends.isEmpty)
 
-  def newLast(newLast: Tile): Tile = this.lastends.add(newLast).last
+    InvalidTile()
 
-  def showNextOpenEnd: String = openends.indexOf(lastEnd) match {
+  else openends.last
 
-    case -1 => graphics(lastEnd.b) + graphics(7) + s"This is the only open end"
 
-    case n => openends.getAt(n) match {
+  def noMove: String = graphics(lastEnd.a) + graphics(lastEnd.a) + graphics(lastEnd.b)
 
-      case Invalid(a) => graphics(lastEnd.b) + graphics(7) + a
 
-      case Valid(t: Tile) => graphics(newLast(t).b) + graphics(7) + s"Open ends: ${n+1} (out of $openends.length)"
+  def emptyScreen: String = graphics(7) + graphics(7)
+
+
+  def passMove: String = if (openends.isEmpty)
+
+    emptyScreen
+
+  else noMove
+
+
+  def newLast(newEnd: Tile): Tile = openends.moveToEnd(newEnd)
+
+
+  def showNextOpenEnd: String = lastEnd match {
+
+    case InvalidTile(7) => emptyScreen + s"There are still no open ends!\n"
+
+    case _ => openends.getAt(0) match {
+
+      case Invalid(e) => graphics(lastEnd.a) + graphics(lastEnd.b) + graphics(7) + e
+
+      case Valid(t: Tile) => graphics(newLast(t).a) + graphics(lastEnd.b) + graphics(7) + s"There are ${openends.length - 1} more open ends to pick from.\n"
 
     }
 
   }
 
+
   def nextOpenEndMenu(currentPlayer: Player): Unit = println(showNextOpenEnd           +
-    currentPlayer.printDeck() +
-    s"dominogame:~  Again?([-y] - Yes, [-n] - No):")
+                                                             playerInfo(currentPlayer) +
+                                                             s"dominogame:~  Again?([-y] - Yes, [-n] - No):")
+
 
   def nextOpenEnd(currentPlayer: Player): String = {
 
@@ -121,7 +144,7 @@ class Game(val player1: Player,
 
     StdIn.readLine match {
 
-      case "-n" => graphics(lastEnd.b)
+      case "-n" =>  s"dominogame:~  Pick:\n" + identifyCommand(currentPlayer)
 
       case _ => nextOpenEnd(currentPlayer)
 
@@ -129,15 +152,49 @@ class Game(val player1: Player,
 
   }
 
-  def wasTileDrawn(currentPlayer: Player): Validated[String, Deck[Tile]] = currentPlayer.drawTileFromBN(boneyard)
+
+  def wasTileDrawn(currentPlayer: Player): Validated[String, ArrayBuffer[Tile]] = currentPlayer.drawTileFromBN(boneyard)
+
 
   def drawTile(currentPlayer: Player): String = wasTileDrawn(currentPlayer) match {
 
     case Invalid(a) => a
 
-    case Valid(_) => graphics(lastEnd.b)
+    case Valid(_) => noMove
 
   }
+
+
+  def addOpenEnd(t: Tile): ArrayBuffer[Tile] = if (openends.isEmpty) {
+
+    if(t.a == t.b){
+
+      openends.add(t)
+
+      openends.add(t)
+
+      openends.add(t)
+
+      openends.add(t)
+
+    } else {
+
+      openends.add(Tile(t.b, t.a))
+
+      openends.add(t)
+
+    }
+
+  } else if(t.a == t.b) {
+
+    openends.add(t)
+
+    openends.add(t)
+
+    openends.add(t)
+
+  } else openends.add(t)
+
 
   def pickTile(currentPlayer: Player): String = toInt(readCommand) match {
 
@@ -145,41 +202,52 @@ class Game(val player1: Player,
 
     case Some(num) => currentPlayer.drawTileFromPile(num) match {
 
-      case Invalid(_) => pickTile(currentPlayer)
+      case Invalid(e) =>
+
+        println(e)
+
+        pickTile(currentPlayer)
 
       case Valid(t) => if (openends.isEmpty) {
 
-        openends.access += t
+        addOpenEnd(t)
 
-        graphics(t.b)
+        graphics(t.a) + graphics(t.b)
 
       }else if(t.a != lastEnd.b && t.b != lastEnd.b) {
-                 
+
         println(s"Tile ends dismatch! Try again!")
 
         pickTile(currentPlayer)
 
-      }else if (t.a == lastEnd.b) {
-
-        openends.access - lastEnd
-
-        openends.access += t
-
-        graphics(t.a) + graphics(t.b)
-
       }else {
 
-        openends.access - lastEnd
+        val last: String = graphics(lastEnd.b)
 
-        openends.access += Tile(t.b, t.a)
+        if (t.a == lastEnd.b) {
 
-        graphics(t.b) + graphics(t.a)
+          openends.use(lastEnd)
+
+          addOpenEnd(t)
+
+          last + graphics(t.a) + graphics(t.b)
+
+        } else {
+
+          openends.use(lastEnd)
+
+          addOpenEnd(Tile(t.b, t.a))
+
+          last + graphics(t.b) + graphics(t.a)
+
+        }
 
       }
 
     }
 
   }
+
 
   def identifyCommand(currentPlayer: Player):  String = readCommand match {
 
@@ -197,6 +265,7 @@ class Game(val player1: Player,
 
   }
 
+
   def readCommand: String = {
 
     println(s"dominogame:~  Pick:")
@@ -206,9 +275,11 @@ class Game(val player1: Player,
   }
 
 
-  def zeroOpenends(): Unit = println(graphics(7) + graphics(7))
+  def zeroOpenends(): Unit = println(emptyScreen)
 
-  def playerInfo(currentPlayer: Player): Unit = println(currentPlayer.announcePlayer() + currentPlayer.printDeck())
+
+  def playerInfo(currentPlayer: Player): String = currentPlayer.announcePlayer() + currentPlayer.printDeck()
+
 
   def pickMoveLoop(currentPlayer: Player): Boolean = identifyCommand(currentPlayer) match {
 
@@ -222,17 +293,26 @@ class Game(val player1: Player,
 
       println(graphics(7))
 
-      pickMoveLoop(currentPlayer)
+      false
 
   }
+
 
   def playerScheduler( quit: Boolean, currentPlayer: Int): Unit = if (player1.pile.length > 0 && player2.pile.length > 0 && !quit) {
 
     currentPlayer match {
 
-      case 1 => playerScheduler(pickMoveLoop(player1), 2)
+      case 1 =>
 
-      case 2 => playerScheduler(pickMoveLoop(player2), 1)
+        println(playerInfo(player1))
+
+        playerScheduler(pickMoveLoop(player1), 2)
+
+      case 2 =>
+
+        println(playerInfo(player2))
+
+        playerScheduler(pickMoveLoop(player2), 1)
 
     }
 
@@ -281,17 +361,19 @@ object Game {
 
     } else array
 
-  def instructions(): Unit = println(s"////////////////////////////////////////////////////////////////////////////////" +
-    s"\n////////////////////////////////   Welcome to:   ///////////////////////////////" +
-    s"\n////////////////////   [-S-Y-S-A-D-M-I-N-] DRAW DOMINOES   /////////////////////" +
-    s"\n////////////////////////////////////////////////////////////////////////////////" +
-    s"\n(*) Instructions:\n> [ -p ] - command for picking a tile to make your" +
-    s"\nmove with and you'll be asked to pick it's subsequent number in your pile" +
-    s"\n> [ -ne ] - command for displaying another open end" +
-    s"\n> [ -dp ] - command for drawing another tile from" +
-    s"\n the boneyard" +
-    s"\n> [ -pm ] - command for passing a move" +
-    s"\n> [ -q ] - command for quiting the game\n\n")
+
+  def instructions(): Unit = println( s"////////////////////////////////////////////////////////////////////////////////" +
+                                    s"\n////////////////////////////////   Welcome to:   ///////////////////////////////" +
+                                    s"\n////////////////////   [-S-Y-S-A-D-M-I-N-] DRAW DOMINOES   /////////////////////" +
+                                    s"\n////////////////////////////////////////////////////////////////////////////////" +
+                                    s"\n(*) Instructions:\n> [ -p ] - command for picking a tile to make your"            +
+                                    s"\nmove with and you'll be asked to pick it's subsequent number in your pile"        +
+                                    s"\n> [ -ne ] - command for displaying another open end"                              +
+                                    s"\n> [ -dp ] - command for drawing another tile from"                                +
+                                    s"\n the boneyard"                                                                    +
+                                    s"\n> [ -pm ] - command for passing a move"                                           +
+                                    s"\n> [ -q ] - command for quiting the game\n\n")
+
 
   def readPlayerName(currentPlayer: Int): String = {
 
@@ -301,9 +383,10 @@ object Game {
 
   }
 
+
   def apply(): Game = {
 
-    val boneyard: Deck[Tile] = Deck[Tile](createBoneyard(ArrayBuffer()))
+    val boneyard: Deck = Deck(createBoneyard(ArrayBuffer()))
 
     instructions()
 
