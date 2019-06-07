@@ -6,7 +6,7 @@ class Player(val name: String, val pile: Deck[Tile]) {
 
     case Invalid(_) => pile
 
-    case Valid(t) => pile.add(t)
+    case Valid(t) => pile.access += t
 
   }
 
@@ -24,7 +24,7 @@ class Player(val name: String, val pile: Deck[Tile]) {
 
     case p @ Valid(t) =>
 
-      pile.use(t)
+      pile.access - t
 
       p
 
@@ -32,11 +32,11 @@ class Player(val name: String, val pile: Deck[Tile]) {
 
   def announcePlayer(): String = s"Now playing: ${this.name}\n"
 
-  def printDeck(d: List[Tile] = pile.unused): String =
+  def printDeck(d: ArrayBuffer[Tile] = pile.access): String =
 
     if (d.nonEmpty) {
 
-      pile.head.print + printDeck(d.tail)
+      d.print + printDeck(d.tail)
 
     }else "\n"
 
@@ -56,14 +56,14 @@ object Player {
 
         case Valid(t: Tile) =>
 
-          deck.use(t)
+          deck.access - t
 
-          fillDeck(deck.add(t), boneyard)
+          fillDeck(deck.access += t, boneyard)
 
       }
 
     }
 
-  def apply(name: String, boneyard: Deck[Tile]): Player = new Player(name, fillDeck(new Deck[Tile](Nil, Nil), boneyard))
+  def apply(name: String, boneyard: Deck[Tile]): Player = new Player(name, fillDeck(new Deck[Tile](ArrayBuffer()), boneyard))
 
 }
