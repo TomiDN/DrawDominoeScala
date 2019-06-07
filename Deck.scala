@@ -1,6 +1,8 @@
 package drawdominoes
 
-class Deck[+A](val main: List[A], val used: List[A]) {
+import scala.collection.mutable.ArrayBuffer
+
+class Deck[+A](val buffer: ArrayBuffer[A]) {
 
   def isEmpty: Boolean = main.diff(used).isEmpty
 
@@ -8,27 +10,17 @@ class Deck[+A](val main: List[A], val used: List[A]) {
 
   def last: A = main.last
 
-  def head: A = unused.head
-
-  def tail: List[A] = unused.tail
-
-  def unused: List[A] = main.diff(used)
-
   def indexOf[B](elem: B): Int = unused.indexOf(elem)
 
-  def add[B >: A](back: B): Deck[B] = Deck[B](this.main :+ back, this.used)
-
-  def use[B >: A](back: B): Deck[B] = Deck[B](this.main, this.used :+ back)
-
-  def find[B](piece: B): Option[A] = unused.find(_ == piece)
+  def access: ArrayBuffer[A] = this.buffer
 
   def getAt[E >: A](index: Int): Validated[String, A] =
 
-    if (unused.isEmpty || (index > unused.length || index < 0))
+    if (buffer.isEmpty || (index > buffer.length || index < 0))
 
       Invalid(s"Invalid index!")
 
-    else Valid(unused(index))
+    else Valid(buffer(index))
 
 
   def randomPosition: Int = {
@@ -47,6 +39,6 @@ class Deck[+A](val main: List[A], val used: List[A]) {
 
 object Deck {
 
-  def apply[A](m: List[A], u: List[A]): Deck[A] = new Deck[A](m, u)
+  def apply[A](b: ArrayBuffer[A]): Deck[A] = new Deck[A](b)
 
 }
