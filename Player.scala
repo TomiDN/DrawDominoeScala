@@ -1,16 +1,20 @@
-package drawdominoes
+package drawdominoesgame
 
-class Player(val name: String, val pile: Deck[Tile]) {
+import scala.collection.mutable.ArrayBuffer
 
-  def getTileFromBN(boneyard: Deck[Tile], position: Int): Deck[Tile] = boneyard.getAt(position) match {
 
-    case Invalid(_) => pile
+class Player(val name: String, val pile: Deck) {
 
-    case Valid(t) => pile.access += t
+  def getTileFromBN(boneyard: Deck, position: Int): ArrayBuffer[Tile] = boneyard.getAt(position) match {
+
+    case Invalid(_) => pile.access
+
+    case Valid(t) => pile.add(boneyard.use(t))
 
   }
 
-  def drawTileFromBN(boneyard: Deck[Tile]): Validated[String, Deck[Tile]] = boneyard.length match {
+
+  def drawTileFromBN(boneyard: Deck): Validated[String, ArrayBuffer[Tile]] = boneyard.length match {
 
     case 0 => Invalid("Boneyard is empty!")
 
@@ -18,25 +22,28 @@ class Player(val name: String, val pile: Deck[Tile]) {
 
   }
 
+
   def drawTileFromPile(index: Int): Validated[String, Tile] =  pile.getAt(index) match {
 
     case i @ Invalid(_) => i
 
     case p @ Valid(t) =>
 
-      pile.access - t
+      pile.use(t)
 
       p
 
   }
 
+
   def announcePlayer(): String = s"Now playing: ${this.name}\n"
 
-  def printDeck(d: ArrayBuffer[Tile] = pile.access): String =
+
+  def printDeck(d: ArrayBuffer[Tile] = pile.access, n: Int = 0): String =
 
     if (d.nonEmpty) {
 
-      d.print + printDeck(d.tail)
+      s"$n." + d.head.print + printDeck(d.tail, n+1)
 
     }else "\n"
 
@@ -44,11 +51,11 @@ class Player(val name: String, val pile: Deck[Tile]) {
 
 object Player {
 
-  def fillDeck(deck: Deck[Tile], boneyard: Deck[Tile]): Deck[Tile] =
+  def fillDeck(deck: ArrayBuffer[Tile], boneyard: Deck): Deck =
 
     deck.length match {
 
-      case 7 => deck
+      case 7 => new Deck(deck)
 
       case _ => boneyard.getAt(boneyard.randomPosition) match {
 
@@ -56,14 +63,15 @@ object Player {
 
         case Valid(t: Tile) =>
 
-          deck.access - t
+          boneyard.use(t)
 
-          fillDeck(deck.access += t, boneyard)
+          fillDeck(deck += t, boneyard)
 
       }
 
     }
 
-  def apply(name: String, boneyard: Deck[Tile]): Player = new Player(name, fillDeck(new Deck[Tile](ArrayBuffer()), boneyard))
+
+  def apply(name: String, boneyard: Deck): Player = new Player(name, fillDeck(ArrayBuffer(), boneyard))
 
 }
