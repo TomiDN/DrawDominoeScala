@@ -1,33 +1,60 @@
-package drawdominoes
+package drawdominoesgame
 
 import scala.collection.mutable.ArrayBuffer
 
-class Deck[+A](val buffer: ArrayBuffer[A]) {
 
-  def isEmpty: Boolean = main.diff(used).isEmpty
+class Deck(private val buffer: ArrayBuffer[Tile]) {
 
-  def length: Int = unused.length
+  def isEmpty: Boolean = buffer.isEmpty
 
-  def last: A = main.last
 
-  def indexOf[B](elem: B): Int = unused.indexOf(elem)
+  def length: Int = buffer.length
 
-  def access: ArrayBuffer[A] = this.buffer
 
-  def getAt[E >: A](index: Int): Validated[String, A] =
+  def last: Tile = buffer.last
 
-    if (buffer.isEmpty || (index > buffer.length || index < 0))
+
+  def access: ArrayBuffer[Tile] = this.buffer
+
+
+  def add(elem: Tile): ArrayBuffer[Tile] = buffer += elem
+
+
+  def use(elem: Tile): Tile = {
+
+    buffer -= elem
+
+    elem
+
+  }
+
+
+  def moveToEnd(elem: Tile): Tile = {
+
+    this.add(this.use(elem))
+
+    buffer.last
+
+  }
+
+
+  def indexOf(elem: Tile): Int = buffer.indexOf(elem)
+
+
+  def getAt(index: Int): Validated[String, Tile] =
+
+    if (index >= this.length || index < 0 || this.isEmpty) {
 
       Invalid(s"Invalid index!")
 
-    else Valid(buffer(index))
+    } else Valid(buffer(index))
 
 
   def randomPosition: Int = {
 
     val start = 0
 
-    val end = length
+    val end = length - 1
 
     val rnd = new scala.util.Random
 
@@ -39,6 +66,7 @@ class Deck[+A](val buffer: ArrayBuffer[A]) {
 
 object Deck {
 
-  def apply[A](b: ArrayBuffer[A]): Deck[A] = new Deck[A](b)
+  def apply(b: ArrayBuffer[Tile]): Deck = new Deck(b)
 
 }
+
