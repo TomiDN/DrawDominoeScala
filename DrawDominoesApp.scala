@@ -1,17 +1,19 @@
-package drawdominoes
+package drawdominoesgame
 
 import scala.io.StdIn
 
-object DrawDominoApp {
+
+object DrawDominoesApp {
 
   def readAnswer: String = {
 
     println(s"dominogame:~ Would you like to play again?\n" +
-      s"\ndominogame:~ ([-y] for Yes and [-n] for No): ")
+            s"\ndominogame:~ ([-y] for Yes and [-n] for No): ")
 
     StdIn.readLine
 
   }
+
 
   def identifyAnswer: Boolean = readAnswer match {
 
@@ -20,6 +22,7 @@ object DrawDominoApp {
     case "-n" => false
 
   }
+
 
   def runGame(game: Game): Unit = {
 
@@ -32,6 +35,7 @@ object DrawDominoApp {
     } else println(s"As you wish...")
 
   }
+
 
   def main(args: Array[String]): Unit = {
 
