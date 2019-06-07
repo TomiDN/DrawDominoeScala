@@ -154,6 +154,8 @@ class Game(val player1: Player,
         graphics(t.b)
 
       }else if(t.a != lastEnd.b && t.b != lastEnd.b) {
+                 
+        println(s"Tile ends dismatch! Try again!")
 
         pickTile(currentPlayer)
 
