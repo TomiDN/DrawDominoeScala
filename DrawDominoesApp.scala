@@ -5,34 +5,48 @@ import scala.io.StdIn
 
 object DrawDominoesApp {
 
-  def readAnswer: String = {
 
-    println(s"dominogame:~ Would you like to play again?\n" +
-            s"\ndominogame:~ ([-y] for Yes and [-n] for No): ")
+  def readAnswer(message: String): String = {
+
+    println(message)
 
     StdIn.readLine
 
   }
 
 
-  def identifyAnswer: Boolean = readAnswer match {
+  def identifyAnswer(input: String, answer1: String, answer2: String): Boolean =
+    if(input == answer1) true
 
-    case "-y" => true
+    else false
 
-    case "-n" => false
 
-  }
+  def showHighScore: Boolean = identifyAnswer(readAnswer(s"dominogame:~ Play game or see high scores?\n" +
+    s"dominogame:~ ([-pg] for 'Play Game' and [-hs] for 'Show High Scores'): "),"-hs", "-pg")
 
 
   def runGame(game: Game): Unit = {
 
-    game.gameloop()
+    if (showHighScore) {
 
-    if (identifyAnswer) {
+      game.showHighScores()
 
       runGame(game)
 
-    } else println(s"As you wish...")
+    }else {
+
+      game.gameloop()
+
+      if (identifyAnswer(readAnswer(s"dominogame:~ Would you like to play again?\n" +
+        s"dominogame:~ ([-y] for Yes and [-n] for No): "), "-y", "-n")) {
+
+        val notFirst: Boolean = false
+
+        runGame(game)
+
+      } else println(s"As you wish...")
+
+    }
 
   }
 
