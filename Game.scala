@@ -10,6 +10,13 @@ class Game(val player1: Player,
            val boneyard: Deck,
            val openends: Deck = Deck(ArrayBuffer())) {
 
+  def highScoreSystem: HighScoring = HighScoring("DDHighScores.txt",
+      s"[-S-Y-S-A-D-M-I-N-] DRAW DOMINOES HIGH SCORES\n\n" +
+      s"format is:\n" +
+      s"[player name] - [count of tiles (higher than 0) that were left in the boneyard]:\n\n",
+      s"Still no high scores... Noobs...")
+
+
   def toInt(s: String): Option[Int] = {
 
     try {
@@ -108,11 +115,13 @@ class Game(val player1: Player,
   def emptyScreen: String = graphics(7) + graphics(7)
 
 
-  def passMove: String = if (openends.isEmpty)
+  def passMove(currentPlayer: Player): String = if (!boneyard.isEmpty)
 
-    emptyScreen
+    s"dominogame:~ Boneyard still not empty and you can't pass a move!\n" +
+    s"dominogame:~ A new tile will be added to your pile instead!\n"      +
+      drawTile(currentPlayer)
 
-  else noMove
+  else  noMove
 
 
   def newLast(newEnd: Tile): Tile = openends.moveToEnd(newEnd)
@@ -120,13 +129,14 @@ class Game(val player1: Player,
 
   def showNextOpenEnd: String = lastEnd match {
 
-    case InvalidTile(7) => emptyScreen + s"There are still no open ends!\n"
+    case InvalidTile(7) => emptyScreen + s"dominogame:~ There are still no open ends!\n"
 
     case _ => openends.getAt(0) match {
 
-      case Invalid(e) => graphics(lastEnd.a) + graphics(lastEnd.b) + graphics(7) + e
+      case Invalid(e) => graphics(lastEnd.a) + graphics(lastEnd.b) + graphics(7) + "dominogame:~ " + e
 
-      case Valid(t: Tile) => graphics(newLast(t).a) + graphics(lastEnd.b) + graphics(7) + s"There are ${openends.length - 1} more open ends to pick from.\n"
+      case Valid(t: Tile) => graphics(newLast(t).a) + graphics(lastEnd.b) + graphics(7) +
+        s"dominogame:~ There are ${openends.length - 1} more open ends to pick from.\n"
 
     }
 
@@ -158,7 +168,7 @@ class Game(val player1: Player,
 
   def drawTile(currentPlayer: Player): String = wasTileDrawn(currentPlayer) match {
 
-    case Invalid(a) => a
+    case Invalid(e) => "dominogame:~ " + e
 
     case Valid(_) => noMove
 
@@ -204,7 +214,7 @@ class Game(val player1: Player,
 
       case Invalid(e) =>
 
-        println(e)
+        println("dominogame:~ " + e)
 
         pickTile(currentPlayer)
 
@@ -216,7 +226,7 @@ class Game(val player1: Player,
 
       }else if(t.a != lastEnd.b && t.b != lastEnd.b) {
 
-        println(s"Tile ends dismatch! Try again!")
+        println(s"dominogame:~ Tile ends dismatch! Try again!")
 
         pickTile(currentPlayer)
 
@@ -251,7 +261,7 @@ class Game(val player1: Player,
 
   def identifyCommand(currentPlayer: Player):  String = readCommand match {
 
-    case "-pm" => passMove
+    case "-pm" => passMove(currentPlayer)
 
     case "-ne" => nextOpenEnd(currentPlayer)
 
@@ -316,7 +326,19 @@ class Game(val player1: Player,
 
     }
 
-  } else  println(s"dominogame:~ Calculating results...")
+  } else  println(s"dominogame:~ Calculating results...\n\n")
+
+
+  def isItHighScore(currentPlayer: Player): Unit = if(!boneyard.isEmpty) {
+
+    highScoreSystem.saveHighScore(currentPlayer.name, boneyard.length)
+
+    println(s"dominogame:~ You have reached a HIGH SCORE OF ${boneyard.length}!!!\n")
+
+  } else println(s"dominogame:~ A victory, indeed... but not a HIGH one!!!\n")
+
+
+  def showHighScores(): Unit = highScoreSystem.printHighScore()
 
 
   def gameloop(): Unit = {
@@ -327,15 +349,27 @@ class Game(val player1: Player,
 
     playerScheduler(start, 1)
 
+    Thread.sleep(1000)
+
     if (player1.pile.length == 0) {
+
+      isItHighScore(player1)
+
+      Thread.sleep(500)
 
       println(s"dominogame:~ ${player1.name} IS THE WINNER")
 
     }else if (player2.pile.length == 0) {
 
+      isItHighScore(player2)
+
+      Thread.sleep(500)
+
       println(s"dominogame:~ ${player2.name} IS THE WINNER")
 
     }
+
+    Thread.sleep(500)
 
     println(s"\ndominogame:~ GOOD GAME, BYE!" + graphics(7))
 
@@ -395,3 +429,4 @@ object Game {
   }
 
 }
+
