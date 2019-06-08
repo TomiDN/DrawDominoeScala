@@ -13,7 +13,9 @@ class Tile(val a: Int, val b: Int) {
 
 }
 
+
 case class InvalidTile(c: Int = 7) extends Tile(c, c)
+
 
 object Tile {
 
