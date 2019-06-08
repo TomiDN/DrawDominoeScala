@@ -40,8 +40,6 @@ object DrawDominoesApp {
       if (identifyAnswer(readAnswer(s"dominogame:~ Would you like to play again?\n" +
         s"dominogame:~ ([-y] for Yes and [-n] for No): "), "-y", "-n")) {
 
-        val notFirst: Boolean = false
-
         runGame(game)
 
       } else println(s"As you wish...")
