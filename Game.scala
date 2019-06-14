@@ -235,31 +235,26 @@ class Game(val player1: Player,
     putStrLn(s"dominogame:~ ${winner.name} IS THE WINNER")
   }
 
+  def checkForWinner: IO[Unit] =
+    if (player1.pile.length == 0) {
+      announceWinner(player1)
+    }else if (player2.pile.length == 0) {
+      announceWinner(player2)
+    }else putStrLn(s"dominogame:~ No winner this time...")
+
+
   def gameloop(): IO[Unit] = {
     zeroOpenends().unsafeRun()
     val start = false
     playerScheduler(start, 1).unsafeRun()
     Thread.sleep(1000)
-    if (player1.pile.length == 0) {
-      announceWinner(player1).unsafeRun()
-    }else if (player2.pile.length == 0) {
-      announceWinner(player2).unsafeRun()
-    }
+    checkForWinner.unsafeRun()
     Thread.sleep(500)
     putStrLn(s"\ndominogame:~ GOOD GAME, BYE!" + graphics(7))
   }
 }
 
 object Game {
-  def createBoneyard(array: ArrayBuffer[Tile], count: Int = 0, i: Int = 0, j: Int = 0): ArrayBuffer[Tile] =
-    if (count < 28){
-      if (i == j) {
-        createBoneyard(array += Tile(i, j), count + 1, 0, j + 1)
-      }else{
-        createBoneyard(array += Tile(i, j), count + 1, i+1, j)
-      }
-    } else array
-
   def instructions(): IO[Unit] = putStrLn(  s"////////////////////////////////////////////////////////////////////////////////" +
                                                 s"\n////////////////////////////////   Welcome to:   ///////////////////////////////" +
                                                 s"\n////////////////////   [-S-Y-S-A-D-M-I-N-] DRAW DOMINOES   /////////////////////" +
@@ -272,14 +267,24 @@ object Game {
                                                 s"\n> [ -pm ] - command for passing a move"                                           +
                                                 s"\n> [ -q ] - command for quiting the game\n\n")
 
+
+  def createBoneyard(array: ArrayBuffer[Tile], count: Int = 0, i: Int = 0, j: Int = 0): ArrayBuffer[Tile] =
+    if (count < 28){
+      if (i == j) {
+        createBoneyard(array += Tile(i, j), count + 1, 0, j + 1)
+      }else{
+        createBoneyard(array += Tile(i, j), count + 1, i+1, j)
+      }
+    } else array
+
   def readPlayerName(currentPlayer: Int): IO[String] = for {
     _ <- putStrLn(s"dominogame:~ Name of Player $currentPlayer:")
     input <- getStrLn
   }yield input
 
   def apply(): Game = {
-    val boneyard: Deck = Deck(createBoneyard(ArrayBuffer()))
     instructions().unsafeRun()
+    val boneyard: Deck = Deck(createBoneyard(ArrayBuffer()))
     new Game(Player(readPlayerName(1).unsafeRun(), boneyard),
       Player(readPlayerName(2).unsafeRun(), boneyard), boneyard)
   }
