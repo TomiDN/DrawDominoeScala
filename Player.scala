@@ -1,23 +1,28 @@
+package drawdominoesgame
+
 import scala.collection.mutable.ArrayBuffer
 
 
 class Player(val name: String, val pile: Deck) {
-  def getTileFromBN(boneyard: Deck, position: Int): ArrayBuffer[Tile] = boneyard.getAt(position) match {
-    case Invalid(_) => pile.access
-    case Valid(t) => pile.add(boneyard.use(t))
-  }
+  def getTileFromBN(boneyard: Deck, position: Int): Option[String] =
+    boneyard.getAt(position) match {
+      case Invalid(e) => Some(e)
+      case Valid(t) =>
+        pile.add(boneyard.use(t))
+        None
+    }
 
-  def drawTileFromBN(boneyard: Deck): Validated[String, ArrayBuffer[Tile]] = boneyard.length match {
-    case 0 => Invalid("Boneyard is empty!")
-    case _ => Valid(getTileFromBN(boneyard, boneyard.randomPosition))
-  }
+  def drawTileFromBN(boneyard: Deck): Option[String] =
+    if (boneyard.length == 0) Some("Boneyard is empty!")
+    else getTileFromBN(boneyard, boneyard.randomPosition)
 
-  def drawTileFromPile(index: Int): Validated[String, Tile] =  pile.getAt(index) match {
-    case i @ Invalid(_) => i
-    case p @ Valid(t) =>
-      pile.use(t)
-      p
-  }
+  def drawTileFromPile(index: Int): Validated[String, Tile] =
+    pile.getAt(index) match {
+      case i @ Invalid(_) => i
+      case p @ Valid(t) =>
+        pile.use(t)
+        p
+    }
 
   def announcePlayer(): String = s"Now playing: ${this.name}\n"
 
