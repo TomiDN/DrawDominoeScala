@@ -16,17 +16,25 @@ object DrawDominoesApp {
   def showHighScore: Boolean = identifyAnswer(readAnswer(s"dominogame:~ Play game or see high scores?\n" +
     s"dominogame:~ ([-pg] for 'Play Game' and [-hs] for 'Show High Scores'): "),"-hs", "-pg")
 
-  def runGame(game: Game): IO[Unit] = {
-    if (showHighScore) {
-      game.showHighScores().unsafeRun()
+  def choiceForMovingForward(game: Game): IO[Unit] =
+    if (identifyAnswer(readAnswer(s"dominogame:~ Would you like to play again?\n" +
+                                  s"dominogame:~ ([-y] for Yes and [-n] for No): "), "-y", "-n")) {
       runGame(game)
-    }else {
-      game.gameloop().unsafeRun()
-      if (identifyAnswer(readAnswer(s"dominogame:~ Would you like to play again?\n" +
-        s"dominogame:~ ([-y] for Yes and [-n] for No): "), "-y", "-n")) {
-        runGame(game)
-      } else putStrLn(s"As you wish...")
-    }
+    } else putStrLn(s"As you wish...")
+
+  def showMeHS(game: Game): IO[Unit] = {
+    game.showHighScores().unsafeRun()
+    runGame(game)
+  }
+
+  def dontShowMeHS(game: Game): IO[Unit] = {
+    game.gameloop().unsafeRun()
+    choiceForMovingForward(game)
+  }
+
+  def runGame(game: Game): IO[Unit] = {
+      if(showHighScore) showMeHS(game)
+      else dontShowMeHS(game)
   }
 
   def main(args: Array[String]): Unit = {
