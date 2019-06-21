@@ -9,10 +9,7 @@ import drawdominoesgame.io.IO
 class HighScoring(filename: String, printmessage: String, emptyfilemessage: String) {
   def orderingByScore(line: String): Int = line.drop(line.indexOfSlice(" by")).toInt
 
-  def sortHighScores(savedHighScores: Vector[String]): Vector[String] = {
-    val savedHighScores: Vector[String] = Source.fromFile(filename).getLines.toVector
-    savedHighScores.sortBy(orderingByScore)
-  }
+  def sortHighScores(savedHighScores: Vector[String]): Vector[String] = savedHighScores.sortBy(orderingByScore)
 
   def writeSortedLines(sortedLines: Vector[String], writer: PrintWriter): Unit =
     if(sortedLines.nonEmpty) {
@@ -35,4 +32,9 @@ class HighScoring(filename: String, printmessage: String, emptyfilemessage: Stri
         putStrLn(line)
       }
     }
+}
+
+object HighScoring {
+  def apply(filename: String, printmessage: String, emptyfilemessage: String): HighScoring =
+    new HighScoring(filename, printmessage, emptyfilemessage)
 }
