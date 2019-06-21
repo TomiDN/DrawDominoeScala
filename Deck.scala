@@ -12,6 +12,8 @@ class Deck(private val buffer: List[Tile]) {
 
   def access: List[Tile] = this.buffer
 
+  def diff(other: Deck): Deck = Deck(this.buffer.diff(other.access))
+
   def add(elem: Tile): Deck = Deck(buffer :+ elem)
 
   def remove(value: Tile, buf: List[Tile] = this.buffer): List[Tile] = buf match {
@@ -25,6 +27,8 @@ class Deck(private val buffer: List[Tile]) {
   def moveToEnd(elem: Tile): Deck = this.use(elem).add(elem)
 
   def indexOf(elem: Tile): Int = buffer.indexOf(elem)
+
+  def getRandomElement: Tile = buffer(randomPosition)
 
   def getAt(index: Int): Validated[String, Tile] =
     if (index >= this.length || index < 0 || this.isEmpty) {
