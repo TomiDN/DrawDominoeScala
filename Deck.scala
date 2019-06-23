@@ -32,7 +32,7 @@ class Deck(private val buffer: List[Tile]) {
 
   def getAt(index: Int): Validated[String, Tile] =
     if (index >= this.length || index < 0 || this.isEmpty) {
-      Invalid(s"Invalid index!")
+      Invalid(s"Invalid index!\n")
     } else Valid(buffer(index))
 
   def randomPosition: Int = {
