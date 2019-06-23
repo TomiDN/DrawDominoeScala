@@ -132,9 +132,9 @@ class Game(val currentPlayer: Player,
 
 case class firstMoveGame(gameEntity: Game, chosen: Tile) extends
   Game( gameEntity.otherPlayer,
-    Player(gameEntity.currentPlayer.name, gameEntity.currentPlayer.pile.use(chosen)),
-    gameEntity.boneyard,
-    Game.addOpenEnd(chosen, gameEntity.openends))
+        Player(gameEntity.currentPlayer.name, gameEntity.currentPlayer.pile.use(chosen)),
+        gameEntity.boneyard,
+        Game.addOpenEnd(chosen, gameEntity.openends))
 
 case class gameWithMove(gameEntity: Game, chosen: Tile) extends
   Game( gameEntity.otherPlayer,
