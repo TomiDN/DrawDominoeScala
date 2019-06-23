@@ -5,13 +5,15 @@ import drawdominoesgame.io.IO
 
 
 class GamerUI {
-  def yes: String = "-y"
+  val first: Boolean = true
 
-  def no: String = "-n"
+  val yes: String = "-y"
 
-  def highScores: String = "-hs"
+  val no: String = "-n"
 
-  def playGame: String = "-pg"
+  val highScores: String = "-hs"
+
+  val playGame: String = "-pg"
 
   def toInt(s: String): Option[Int] = {
     try {
@@ -37,7 +39,7 @@ class GamerUI {
       val newEntity: Game = firstMoveGame(gameEntity, chosen)
       middleProcess(readAnswer(gameEntity.firstMove(chosen) + nowPlaying(newEntity) +  Game.pickLine).unsafeRun(), newEntity)
     } else if (chosen.a != gameEntity.lastEnd.b && chosen.b != gameEntity.lastEnd.b)
-      middleProcess(readAnswer(gameEntity.wrongMove() + Game.pickLine).unsafeRun(), gameEntity)
+      middleProcess(readAnswer(gameEntity.wrongMove + Game.pickLine).unsafeRun(), gameEntity)
     else if (chosen.a == gameEntity.lastEnd.b) {
       val newEntity: Game = gameWithMove(gameEntity, chosen)
       middleProcess(readAnswer(gameEntity.normalMove(chosen) + nowPlaying(newEntity) + Game.pickLine).unsafeRun(), newEntity)
@@ -49,12 +51,16 @@ class GamerUI {
   def playMove(gameEntity: Game, chosen: Int, firstMove: Boolean): Unit =
     gameEntity.currentPlayer.pile.getAt(chosen) match {
       case Valid(piece) => validMove(gameEntity, piece, firstMove)
-      case Invalid(e) => middleProcess(readAnswer(Game.commandLine + e + '\n' + Game.pickLine).unsafeRun(), gameEntity)
+      case Invalid(e) => middleProcess(readAnswer(Game.commandLine + e + Game.pickLine).unsafeRun(), gameEntity)
     }
 
   def drawPiece(gameEntity: Game, message: String): Unit = {
-    val newEntity: Game = gameWithDrawnTile(gameEntity, gameEntity.boneyard.getRandomElement)
-    middleProcess(readAnswer(message  + nowPlaying(newEntity) + Game.pickLine).unsafeRun(), newEntity)
+    if(gameEntity.boneyard.isEmpty){
+      middleProcess(readAnswer(Game.commandLine + s"Boneyard is empty!\n" + Game.pickLine).unsafeRun(), gameEntity)
+    }else {
+      val newEntity: Game = gameWithDrawnTile(gameEntity, gameEntity.boneyard.getRandomElement)
+      middleProcess(readAnswer(message + nowPlaying(newEntity) + Game.pickLine).unsafeRun(), newEntity)
+    }
   }
 
   def tryPassMove(gameEntity: Game): Unit =
@@ -82,14 +88,10 @@ class GamerUI {
     else  middleProcess(readAnswer(Game.pickLine).unsafeRun(), gameEntity)
 
   def otherCommands(command: String, gameEntity: Game, firstMove: Boolean): Unit =
-    if (command == Game.passMove)
-      tryPassMove(gameEntity)
-    else if (command ==  Game.nextMove) {
-      val initialAnswer: Boolean = true
-      nextOpenEnd(gameEntity, initialAnswer)
-    } else if (command ==  Game.drawTile)
-      drawPiece(gameEntity, gameEntity.noMove)
-    else  middleProcess(readAnswer(Game.pickLine).unsafeRun(), gameEntity)
+    if      (command == Game.passMove) tryPassMove(gameEntity)
+    else if (command == Game.nextMove) nextOpenEnd(gameEntity, first)
+    else if (command == Game.drawTile) drawPiece(gameEntity, gameEntity.noMove)
+    else     middleProcess(readAnswer(Game.commandLine + s"Invalid command!\n" + Game.pickLine).unsafeRun(), gameEntity)
 
   def doCommand(command: String, gameEntity: Game, firstMove: Boolean): Unit =
     toInt(command) match {
@@ -97,19 +99,11 @@ class GamerUI {
       case None => otherCommands(command, gameEntity, firstMove)
     }
 
-  def startNewGame(): Game = {
-    Game.instructions().unsafeRun()
-    val initialFirstState: Deck = Game.initialDeck
-    val player1: Player = Player(readAnswer(Game.commandLine + s"Name of Player 1:").unsafeRun(), initialFirstState)
-    val initialSecondState: Deck = Game.initialDeck.diff(player1.pile)
-    val player2: Player = Player(readAnswer(Game.commandLine + s"Name of Player 2:").unsafeRun(), initialSecondState)
-    Game(player1, player2, initialSecondState.diff(player2.pile))
-  }
-
   def choiceForMovingForward(): Unit =
     if (identifyAnswer(readAnswer(Game.commandLine + s"Would you like to play again?\n" +
       Game.commandLine + s"([$yes] for Yes and [$no] for No): "), yes, no)) {
-      runMenu(startNewGame())
+      runMenu(Game.startNewGame(readAnswer(Game.instructions + Game.commandLine + s"Name of Player 1:").unsafeRun(),
+                                readAnswer(Game.commandLine + s"Name of Player 2:").unsafeRun()))
     } else putStrLn(Game.commandLine + s"As you wish...").unsafeRun()
 
   def showMeHS(game: Game): Unit = {
@@ -123,8 +117,7 @@ class GamerUI {
     } else gameEntity.endGame.unsafeRun()
 
   def dontShowMeHS(game: Game): Unit = {
-    val firstMove = true
-    middleProcess(readAnswer(game.emptyScreen + nowPlaying(game) + Game.pickLine).unsafeRun(), game, firstMove)
+    middleProcess(readAnswer(game.emptyScreen + nowPlaying(game) + Game.pickLine).unsafeRun(), game, first)
     choiceForMovingForward()
   }
 
@@ -136,7 +129,9 @@ class GamerUI {
     else dontShowMeHS(game)
   }
 
-  def mainLoop(): Unit = runMenu(startNewGame())
+  def mainLoop(): Unit =
+    runMenu(Game.startNewGame(readAnswer(Game.instructions + Game.commandLine + s"Name of Player 1:").unsafeRun(),
+                              readAnswer(Game.commandLine + s"Name of Player 2:").unsafeRun()))
 }
 
 object GamerUI{
