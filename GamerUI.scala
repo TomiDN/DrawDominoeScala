@@ -102,14 +102,8 @@ class GamerUI {
   def choiceForMovingForward(): Unit =
     if (identifyAnswer(readAnswer(Game.commandLine + s"Would you like to play again?\n" +
       Game.commandLine + s"([$yes] for Yes and [$no] for No): "), yes, no)) {
-      runMenu(Game.startNewGame(readAnswer(Game.instructions + Game.commandLine + s"Name of Player 1:").unsafeRun(),
-                                readAnswer(Game.commandLine + s"Name of Player 2:").unsafeRun()))
+      runMenu(initializeGame)
     } else putStrLn(Game.commandLine + s"As you wish...").unsafeRun()
-
-  def showMeHS(game: Game): Unit = {
-    game.showHighScores().unsafeRun()
-    runMenu(game)
-  }
 
   def middleProcess(command: String, gameEntity: Game, firstMove: Boolean = false): Unit =
     if (command != Game.quitGame && gameEntity.currentPlayer.pile.length > 0 && gameEntity.otherPlayer.pile.length > 0) {
@@ -121,6 +115,11 @@ class GamerUI {
     choiceForMovingForward()
   }
 
+  def showMeHS(game: Game): Unit = {
+    game.showHighScores().unsafeRun()
+    runMenu(game)
+  }
+
   def showHighScore: Boolean = identifyAnswer(readAnswer(Game.commandLine + s"Play game or see high scores?\n" +
     Game.commandLine + s"([$playGame] for 'Play Game' and [$highScores] for 'Show High Scores'): "), highScores, playGame)
 
@@ -129,11 +128,13 @@ class GamerUI {
     else dontShowMeHS(game)
   }
 
+  def initializeGame: Game =
+    Game.startNewGame(readAnswer(Game.instructions + Game.commandLine + s"Name of Player 1:").unsafeRun(),
+                      readAnswer(Game.commandLine + s"Name of Player 2:").unsafeRun())
+
   def mainLoop(): Unit =
-    runMenu(Game.startNewGame(readAnswer(Game.instructions + Game.commandLine + s"Name of Player 1:").unsafeRun(),
-                              readAnswer(Game.commandLine + s"Name of Player 2:").unsafeRun()))
+    runMenu(initializeGame)
 }
 
 object GamerUI{
   def apply(): GamerUI = new GamerUI()
-}
