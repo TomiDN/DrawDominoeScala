@@ -11,11 +11,13 @@ class Game(val currentPlayer: Player,
   val emptySpace: Int = 7
 
   def highScoreSystem: HighScoring =
-    HighScoring("DDHighScores.txt",
-                s"[-S-Y-S-A-D-M-I-N-] DRAW DOMINOES HIGH SCORES\n\n" +
-                s"format is:\n"                                      +
-                s"[player name] - [count of tiles (higher than 0) that were left in the boneyard]:\n\n",
-                s"Still no high scores... Noobs...")
+    HighScoring(  "DDHighScores.txt",
+                  graphics(emptySpace) +
+                  s"---------------------------------------------------------------------------------\n" +
+                  s"[-S-Y-S-A-D-M-I-N-] DRAW DOMINOES HIGH SCORES\n\n"                                   +
+                  s"format is:\n"                                                                          +
+                  s"[count of tiles (higher than 0) that were left in the boneyard] by [player name]:\n",
+                  s"Still no high scores... Noobs..." )
 
   def graphics(which: Int): String = which match {
     case 0 =>  s"_______________"  +
@@ -74,18 +76,20 @@ class Game(val currentPlayer: Player,
             s"\n|  _         _  |" +
             s"\n| |_|       |_| |" +
             s"\n|_______________|\n"
-    case _ => s"\n\n\n\n\n\n\n\n"
+    case _ => Game.blank
   }
 
   def lastEnd: Tile = openends.last
 
-  def noMove: String = graphics(lastEnd.a) + graphics(lastEnd.a) + graphics(lastEnd.b)
+  def noMove: String =
+    if(openends.isEmpty) emptyScreen
+    else graphics(lastEnd.a) + graphics(lastEnd.a) + graphics(lastEnd.b)
 
   val emptyScreen: String = graphics(emptySpace) + graphics(emptySpace)
 
   val wrongMove: String = Game.commandLine + s"Tile ends dismatch! Try again!\n"
 
-  val unsuccessfulpassMove: String = noMove +
+  def unsuccessfulpassMove: String = noMove +
         Game.commandLine + s"Boneyard still not empty and you can't pass a move!\n" +
         Game.commandLine + s"A new tile will be added to your pile instead!\n"
 
@@ -105,7 +109,7 @@ class Game(val currentPlayer: Player,
       putStrLn(Game.commandLine + s"You have reached a HIGH SCORE OF ${boneyard.length}!!!\n")
     } else putStrLn(Game.commandLine + s"A victory, indeed... but not a HIGH one!!!\n")
 
-  def showHighScores(): IO[Unit] = highScoreSystem.printHighScore()
+  def showHighScores(): IO[Unit] = highScoreSystem.printHighScore
 
   def announceWinner(winner: Player): IO[Unit] = for {
     _ <- putStrLn(Game.commandLine + s"${winner.name} IS THE WINNER")
@@ -120,7 +124,7 @@ class Game(val currentPlayer: Player,
     }else putStrLn(Game.commandLine + s"No winner this time...")
 
   def endGame: IO[Unit] = for {
-    _ <- putStrLn(Game.commandLine + s"Calculating results...\n\n")
+    _ <- putStrLn(graphics(emptySpace) + Game.commandLine + s"Calculating results...\n\n")
     _ <- checkForWinner
     _ <- putStrLn(Game.commandLine + s"GOOD GAME, BYE!" + graphics(emptySpace))
   }yield ()
@@ -169,6 +173,8 @@ object Game {
 
   val quitGame: String = "-q"
 
+  val blank: String = s"\n\n\n\n\n\n\n\n"
+
   val instructions: String =
                     s"////////////////////////////////////////////////////////////////////////////////" +
                   s"\n////////////////////////////////   Welcome to:   ///////////////////////////////" +
@@ -216,9 +222,9 @@ object Game {
 
   def startNewGame(name1: String, name2: String): Game = {
     val initialFirstState: Deck = Game.initialDeck
-    val player1: Player = Player(name1, initialFirstState)
+    val player1: Player = Player(name1, fillDeck(initialFirstState))
     val initialSecondState: Deck = Game.initialDeck.diff(player1.pile)
-    val player2: Player = Player(name2, initialSecondState)
+    val player2: Player = Player(name2, fillDeck(initialSecondState))
     Game(player1, player2, initialSecondState.diff(player2.pile))
   }
 
