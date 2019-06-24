@@ -79,15 +79,15 @@ class Game(val currentPlayer: Player,
 
   def lastEnd: Tile = openends.last
 
+  def noMove: String = graphics(lastEnd.a) + graphics(lastEnd.a) + graphics(lastEnd.b)
+
   val emptyScreen: String = graphics(emptySpace) + graphics(emptySpace)
 
   val wrongMove: String = Game.commandLine + s"Tile ends dismatch! Try again!\n"
 
-  val unsuccessfulpassMove: String =
+  val unsuccessfulpassMove: String = noMove +
         Game.commandLine + s"Boneyard still not empty and you can't pass a move!\n" +
         Game.commandLine + s"A new tile will be added to your pile instead!\n"
-
-  def noMove: String = graphics(lastEnd.a) + graphics(lastEnd.a) + graphics(lastEnd.b)
 
   def openEndDisplay: String =
         graphics(lastEnd.a) + graphics(lastEnd.b) + graphics(emptySpace) +
@@ -95,11 +95,7 @@ class Game(val currentPlayer: Player,
 
   def firstMove(t: Tile): String = graphics(t.a) + graphics(t.b) + graphics(emptySpace)
 
-  def normalMove(t: Tile): String = {
-    val last: String = graphics(lastEnd.b)
-    if (t.a == lastEnd.b) last + graphics(t.a) + graphics(t.b) + graphics(emptySpace)
-    else last + graphics(t.b) + graphics(t.a) + graphics(emptySpace)
-  }
+  def normalMove(t: Tile): String = graphics(lastEnd.b) + graphics(t.a) + graphics(t.b) + graphics(emptySpace)
 
   def playerInfo: String = currentPlayer.announcePlayer() + currentPlayer.printDeck() + "\n"
 
