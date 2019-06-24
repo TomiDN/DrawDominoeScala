@@ -6,7 +6,9 @@ import drawdominoesgame.io.Console._
 import drawdominoesgame.io.IO
 
 
-class HighScoring(filename: String, printmessage: String, emptyfilemessage: String) {
+class HighScoring(hsFile: File, filename: String, printmessage: String, emptyfilemessage: String) {
+  val closing: String = s"---------------------------------------------------------------------------------"
+
   def orderingByScore(line: String): Int = line.drop(line.indexOfSlice(" by")).toInt
 
   def sortHighScores(savedHighScores: Vector[String]): Vector[String] = savedHighScores.sortBy(orderingByScore)
@@ -20,21 +22,35 @@ class HighScoring(filename: String, printmessage: String, emptyfilemessage: Stri
   def saveHighScore(player: String, score: Int): Unit =
     writeSortedLines(
       sortHighScores(Source.fromFile(filename).getLines.toVector :+ (score + " by " + player)),
-      new PrintWriter(new File(filename))
+      new PrintWriter(hsFile)
     )
 
-  def printHighScore(): IO[Unit] =
-    putStrLn(printmessage)
-    if(Source.fromFile(filename).isEmpty){
-      putStrLn(emptyfilemessage)
-    } else {
-      for (line <- Source.fromFile(filename).getLines) {
-        putStrLn(line)
-      }
-    }
+  def initiateFile(writer: PrintWriter): Unit = writer.write("")
+
+  def noHighScores: Boolean = Source.fromFile(filename).getLines().toVector.isEmpty
+
+  def fileExists: Boolean =
+    if(!hsFile.exists()) {
+      initiateFile(new PrintWriter(hsFile))
+      false
+    } else true
+
+  def printLines(lines: Vector[String], res: String = ""): String =
+    if (lines.isEmpty) res
+    else printLines(lines.tail, res + lines.head + "\n")
+
+  def printResult: IO[Unit] =
+    if (fileExists && noHighScores) putStrLn(emptyfilemessage)
+    else putStrLn(printLines(Source.fromFile(filename).getLines.toVector))
+
+  def printHighScore: IO[Unit] = for {
+    _ <- putStrLn(printmessage)
+    _ <- printResult
+    _ <- putStrLn(closing)
+  }yield ()
 }
 
 object HighScoring {
   def apply(filename: String, printmessage: String, emptyfilemessage: String): HighScoring =
-    new HighScoring(filename, printmessage, emptyfilemessage)
+    new HighScoring(new File(filename), filename, printmessage, emptyfilemessage)
 }
