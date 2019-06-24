@@ -34,19 +34,21 @@ class GamerUI {
 
   def nowPlaying(gameEntity: Game): String = gameEntity.playerInfo
 
+  def firstMovePlay(oldEntity: Game, newEntity: Game, chosen: Tile): Unit =
+    middleProcess(readAnswer(oldEntity.firstMove(chosen) + nowPlaying(newEntity) + Game.pickLine).unsafeRun(), newEntity)
+
+  def normalMovePlay(oldEntity: Game, newEntity: Game, chosen: Tile): Unit =
+    middleProcess(readAnswer(oldEntity.normalMove(chosen) + nowPlaying(newEntity) + Game.pickLine).unsafeRun(), newEntity)
+
   def validMove(gameEntity: Game, chosen: Tile, firstMove: Boolean): Unit =
-    if(firstMove) {
-      val newEntity: Game = firstMoveGame(gameEntity, chosen)
-      middleProcess(readAnswer(gameEntity.firstMove(chosen) + nowPlaying(newEntity) +  Game.pickLine).unsafeRun(), newEntity)
-    } else if (chosen.a != gameEntity.lastEnd.b && chosen.b != gameEntity.lastEnd.b)
+    if(firstMove)
+      firstMovePlay(gameEntity, firstMoveGame(gameEntity, chosen), chosen)
+    else if (chosen.a != gameEntity.lastEnd.b && chosen.b != gameEntity.lastEnd.b)
       middleProcess(readAnswer(gameEntity.wrongMove + Game.pickLine).unsafeRun(), gameEntity)
-    else if (chosen.a == gameEntity.lastEnd.b) {
-      val newEntity: Game = gameWithMove(gameEntity, chosen)
-      middleProcess(readAnswer(gameEntity.normalMove(chosen) + nowPlaying(newEntity) + Game.pickLine).unsafeRun(), newEntity)
-    } else {
-      val newEntity: Game = gameWithMove(gameEntity, Tile(chosen.b, chosen.a))
-      middleProcess(readAnswer(gameEntity.normalMove(chosen) + nowPlaying(newEntity)  + Game.pickLine).unsafeRun(), newEntity)
-    }
+    else if (chosen.a == gameEntity.lastEnd.b)
+      normalMovePlay(gameEntity, gameWithMove(gameEntity, chosen), chosen)
+    else
+      normalMovePlay(gameEntity, gameWithMove(gameEntity, Tile(chosen.b, chosen.a)), Tile(chosen.b, chosen.a))
 
   def playMove(gameEntity: Game, chosen: Int, firstMove: Boolean): Unit =
     gameEntity.currentPlayer.pile.getAt(chosen) match {
@@ -54,29 +56,25 @@ class GamerUI {
       case Invalid(e) => middleProcess(readAnswer(Game.commandLine + e + Game.pickLine).unsafeRun(), gameEntity)
     }
 
-  def drawPiece(gameEntity: Game, message: String): Unit = {
-    if(gameEntity.boneyard.isEmpty){
+  def noMovePlay(newEntity: Game, message: String): Unit =
+    middleProcess(readAnswer(message + nowPlaying(newEntity) + Game.pickLine).unsafeRun(), newEntity)
+
+  def drawPiece(gameEntity: Game, message: String): Unit =
+    if(gameEntity.boneyard.isEmpty)
       middleProcess(readAnswer(Game.commandLine + s"Boneyard is empty!\n" + Game.pickLine).unsafeRun(), gameEntity)
-    }else {
-      val newEntity: Game = gameWithDrawnTile(gameEntity, gameEntity.boneyard.getRandomElement)
-      middleProcess(readAnswer(message + nowPlaying(newEntity) + Game.pickLine).unsafeRun(), newEntity)
-    }
-  }
+    else
+      noMovePlay(gameWithDrawnTile(gameEntity, gameEntity.boneyard.getRandomElement), message)
 
   def tryPassMove(gameEntity: Game): Unit =
     if (!gameEntity.boneyard.isEmpty) drawPiece(gameEntity, gameEntity.unsuccessfulpassMove)
-    else {
-      val newEntity: Game = simpleSwitchGame(gameEntity)
-      middleProcess(readAnswer(gameEntity.noMove + nowPlaying(newEntity) + Game.pickLine).unsafeRun(), newEntity)
-    }
+    else noMovePlay(simpleSwitchGame(gameEntity), gameEntity.noMove)
 
   def showNextOpenEnd(gameEntity: Game): Boolean = identifyAnswer(readAnswer(gameEntity.openEndDisplay +
     nowPlaying(gameEntity) + Game.commandLine + s"Again?([$yes] - Yes, [$no] - No):" + Game.pickLine), yes, no)
 
-  def showOpenEnd(gameEntity: Game): Unit = {
-    val newEntity: Game = gameWithNewOpenEnd(gameEntity, gameEntity.openends.head)
-    nextOpenEnd(newEntity, showNextOpenEnd(newEntity))
-  }
+  def newOpenEndMove(newEntity: Game): Unit = nextOpenEnd(newEntity, showNextOpenEnd(newEntity))
+
+  def showOpenEnd(gameEntity: Game): Unit = newOpenEndMove(gameWithNewOpenEnd(gameEntity, gameEntity.openends.head))
 
   def analyseOpenEnd(gameEntity: Game): Unit =
     if (!gameEntity.openends.isEmpty) showOpenEnd(gameEntity)
@@ -138,3 +136,4 @@ class GamerUI {
 
 object GamerUI{
   def apply(): GamerUI = new GamerUI()
+}
