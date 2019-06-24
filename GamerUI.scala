@@ -34,18 +34,18 @@ class GamerUI {
 
   def nowPlaying(gameEntity: Game): String = gameEntity.playerInfo
 
-  def normalMovePlay(newEntity: Game, chosen: Tile, message: String): Unit =
+  def normalMovePlay(newEntity: Game, message: String): Unit =
     middleProcess(readAnswer(message + nowPlaying(newEntity) + Game.pickLine).unsafeRun(), newEntity)
 
   def validMove(gameEntity: Game, chosen: Tile, firstMove: Boolean): Unit =
     if(firstMove)
-      normalMovePlay(firstMoveGame(gameEntity, chosen), chosen, gameEntity.firstMove(chosen))
+      normalMovePlay(firstMoveGame(gameEntity, chosen), gameEntity.firstMove(chosen))
     else if (chosen.a != gameEntity.lastEnd.b && chosen.b != gameEntity.lastEnd.b)
       middleProcess(readAnswer(gameEntity.wrongMove + Game.pickLine).unsafeRun(), gameEntity)
     else if (chosen.a == gameEntity.lastEnd.b)
-      normalMovePlay(gameWithMove(gameEntity, chosen), chosen, gameEntity.normalMove(chosen))
+      normalMovePlay(gameWithMove(gameEntity, chosen), gameEntity.normalMove(chosen))
     else
-      normalMovePlay(gameWithMove(gameEntity, Tile(chosen.b, chosen.a)), Tile(chosen.b, chosen.a), gameEntity.normalMove(chosen))
+      normalMovePlay(gameWithMove(gameEntity, Tile(chosen.b, chosen.a)), gameEntity.normalMove(Tile(chosen.b, chosen.a)))
 
   def playMove(gameEntity: Game, chosen: Int, firstMove: Boolean): Unit =
     gameEntity.currentPlayer.pile.getAt(chosen) match {
