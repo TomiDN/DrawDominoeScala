@@ -38,7 +38,7 @@ class GamerUI {
     middleProcess(readAnswer(message + nowPlaying(newEntity) + Game.pickLine).unsafeRun(), newEntity)
 
   def validMove(gameEntity: Game, chosen: Tile, firstMove: Boolean): Unit =
-    if(firstMove)
+    if(firstMove || gameEntity.openends.isEmpty)
       normalMovePlay(firstMoveGame(gameEntity, chosen), gameEntity.firstMove(chosen))
     else if (chosen.a != gameEntity.lastEnd.b && chosen.b != gameEntity.lastEnd.b)
       middleProcess(readAnswer(gameEntity.wrongMove + Game.pickLine).unsafeRun(), gameEntity)
@@ -97,8 +97,8 @@ class GamerUI {
   def choiceForMovingForward(): Unit =
     if (identifyAnswer(readAnswer(Game.commandLine + s"Would you like to play again?\n" +
       Game.commandLine + s"([$yes] for Yes and [$no] for No): "), yes, no)) {
-      runMenu(initializeGame)
-    } else putStrLn(Game.commandLine + s"As you wish...").unsafeRun()
+      runMenu(initializeGame(Game.blank))
+    } else putStrLn(Game.blank + Game.commandLine + s"As you wish...").unsafeRun()
 
   def middleProcess(command: String, gameEntity: Game, firstMove: Boolean = false): Unit =
     if (command != Game.quitGame && gameEntity.currentPlayer.pile.length > 0 && gameEntity.otherPlayer.pile.length > 0) {
@@ -123,12 +123,12 @@ class GamerUI {
     else dontShowMeHS(game)
   }
 
-  def initializeGame: Game =
-    Game.startNewGame(readAnswer(Game.instructions + Game.commandLine + s"Name of Player 1:").unsafeRun(),
+  def initializeGame(beginning: String = ""): Game =
+    Game.startNewGame(readAnswer(beginning + Game.instructions + Game.commandLine + s"Name of Player 1:").unsafeRun(),
                       readAnswer(Game.commandLine + s"Name of Player 2:").unsafeRun())
 
   def mainLoop(): Unit =
-    runMenu(initializeGame)
+    runMenu(initializeGame())
 }
 
 object GamerUI{
